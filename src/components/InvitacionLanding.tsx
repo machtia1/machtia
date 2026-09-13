@@ -3,20 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-function capitalizar(slug: string): string {
-  return slug
-    .split('-')
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ');
-}
-
-// Solo letras (incluye acentos/ñ) y espacios — sin números ni caracteres especiales.
 const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$/;
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: string }) {
+interface Props {
+  invitadorLinkId: string;
+  invitadorNombre: string;
+}
+
+export default function InvitacionLanding({ invitadorLinkId, invitadorNombre }: Props) {
   const router = useRouter();
-  const nombreInvitador = capitalizar(invitadorSlug);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoDisponible, setVideoDisponible] = useState(true);
@@ -26,9 +22,11 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
   const [correo, setCorreo] = useState('');
   const [errorNombre, setErrorNombre] = useState('');
   const [errorCorreo, setErrorCorreo] = useState('');
+  const [errorEnvio, setErrorEnvio] = useState('');
+  const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [linkDesarrollo, setLinkDesarrollo] = useState<string | undefined>();
 
-  // Reproduce automáticamente el video al entrar en la pantalla (scroll).
   useEffect(() => {
     if (!videoRef.current) return;
     const obs = new IntersectionObserver(
@@ -72,18 +70,34 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorEnvio('');
     const nombreOk = nombre.trim() && SOLO_LETRAS.test(nombre);
     const correoOk = correo.trim() && CORREO_VALIDO.test(correo);
     if (!nombreOk) setErrorNombre('Escribe tu nombre y apellido (solo letras).');
     if (!correoOk) setErrorCorreo('Escribe un correo válido.');
     if (!nombreOk || !correoOk) return;
 
-    // Fase 2 (correo de confirmación + formulario completo) depende de
-    // que ya estén conectados Brevo y la base de datos. Por ahora se
-    // simula el paso siguiente para poder revisar el flujo completo.
-    setEnviado(true);
+    setEnviando(true);
+    try {
+      const res = await fetch('/api/preregistro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, correo, invitadorLinkId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorEnvio(data.error || 'No se pudo completar el preregistro');
+        return;
+      }
+      setLinkDesarrollo(data.linkDesarrollo);
+      setEnviado(true);
+    } catch {
+      setErrorEnvio('Error de conexión, intenta de nuevo');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -97,7 +111,7 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
         {!enviado ? (
           <>
             <h1 className="text-[28px] sm:text-[34px] font-semibold leading-tight mb-3">
-              Bienvenido al espacio de {nombreInvitador}
+              Bienvenido al espacio de {invitadorNombre}
             </h1>
             <p className="text-white/70 text-[15px] leading-relaxed mb-8">
               Quiero que conozcas cómo puedes aprender, ayudar y ganar junto a otras personas.
@@ -105,7 +119,6 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
               ¿Estás listo?
             </p>
 
-            {/* Video de presentación */}
             <div
               onClick={toggleVideo}
               className="relative rounded-2xl overflow-hidden bg-black/40 border border-white/10 mb-6 cursor-pointer aspect-video"
@@ -143,7 +156,6 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
               Conoce más en nuestro sitio
             </button>
 
-            {/* Preregistro */}
             <div className="bg-white/[0.05] border border-white/10 rounded-2xl p-6">
               <p className="text-[13px] font-semibold text-white/60 uppercase tracking-wide mb-1">
                 Comienza tu registro aquí
@@ -173,11 +185,14 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
                   {errorCorreo && <p className="text-red-400 text-[12px] mt-1">{errorCorreo}</p>}
                 </div>
 
+                {errorEnvio && <p className="text-red-400 text-[13px]">{errorEnvio}</p>}
+
                 <button
                   type="submit"
-                  className="h-11 rounded-lg bg-white text-cm-primaryDark text-[14px] font-semibold mt-1"
+                  disabled={enviando}
+                  className="h-11 rounded-lg bg-white text-cm-primaryDark text-[14px] font-semibold mt-1 disabled:opacity-60"
                 >
-                  Continuar
+                  {enviando ? 'Enviando...' : 'Continuar'}
                 </button>
               </form>
             </div>
@@ -192,9 +207,16 @@ export default function InvitacionLanding({ invitadorSlug }: { invitadorSlug: st
               Te enviamos un correo de confirmación a <b>{correo}</b>. Al confirmarlo, vas a poder
               completar tu registro con tus datos, elegir tu suscripción y subir tu comprobante de pago.
             </p>
-            <p className="text-white/40 text-[12px] mt-5">
-              (Simulado: el envío real de este correo depende de conectar Brevo y la base de datos)
-            </p>
+            {linkDesarrollo && (
+              <div className="mt-5 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-left">
+                <p className="text-yellow-300 text-[11px] font-semibold uppercase tracking-wide mb-1">
+                  Modo desarrollo (Brevo no está conectado todavía)
+                </p>
+                <a href={linkDesarrollo} className="text-yellow-200 text-[12px] underline break-all">
+                  {linkDesarrollo}
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>

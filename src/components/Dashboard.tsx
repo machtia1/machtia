@@ -155,7 +155,7 @@ export default function Dashboard() {
   const role = mapRol(user.rol);
   const nombreCompleto = `${user.nombre} ${user.apellido}`;
   const primeraLetra = user.nombre.charAt(0).toUpperCase();
-  const linkInvitacion = `clubmachtia.com/r/${user.linkInvitacion}`;
+  const linkInvitacion = `machtiaeducacion.com/invitacion/${user.linkInvitacion}`;
 
   return (
     <div className="flex min-h-screen bg-[#F4F6FB] text-[#1C1E2B]">
