@@ -71,3 +71,25 @@ confirmó el cliente por WhatsApp — coinciden exactamente.
 - Este motor todavía no puede probarse con datos reales de punta a
   punta porque depende del Registro Fase 2 + aprobación de pagos,
   que siguen pendientes en tu roadmap
+
+## Actualización — fechas confirmadas (13 sept 2026, tarde)
+
+Daniel confirmó las fechas exactas de la campaña:
+- **Inicio:** lunes 14 de septiembre 2026, 10:00 PM hora Centro de México
+- **Corte:** 30 de octubre 2026, 10:00 PM hora Centro de México
+
+Se actualizó `src/lib/redAlterna.ts` con ambas fechas exactas (antes
+solo tenía la fecha de corte con una hora temporal de 6:00 AM). La
+función `redAlternaActiva()` ahora también valida que ya haya
+empezado la campaña, no solo que no haya terminado.
+
+## Otras confirmaciones del cliente (no requieren cambios de código)
+
+- **Vigencia del contrato:** enero 2027 (fecha del 4to pago). Las
+  regalías continúan de forma indefinida después de esa fecha. Al
+  terminar, se puede firmar un contrato nuevo para desarrollos
+  posteriores.
+- **Monto del bono final:** se confirma después del primer pago,
+  puede ser de hasta $8,500 MXN.
+- Estos dos puntos son administrativos/contractuales — vale la pena
+  dejarlos por escrito en el contrato mismo, no solo en WhatsApp.

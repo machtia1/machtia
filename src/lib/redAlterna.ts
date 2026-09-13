@@ -35,13 +35,16 @@ import { prisma } from './prisma';
 // 4. La Red General NO contabiliza ganancias mientras la Red
 //    Alterna esté activa. Vuelve a contar a partir del corte.
 //
-// 5. La fecha de corte se define en RED_ALTERNA_FIN_ISO — ajústala
-//    en cuanto el cliente confirme la hora exacta del 30 de
-//    octubre.
+// 5. Fechas de la campaña confirmadas por el cliente el 13 sept 2026:
+//    inicio lunes 14 de septiembre 2026, 10:00 PM hora Centro de
+//    México (UTC-6), corte 30 de octubre 2026, 10:00 PM misma zona.
 // ============================================================
 
-/** Fecha y hora de corte de la Red Alterna (zona horaria de México). */
-const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T06:00:00-06:00';
+/** Fecha y hora de INICIO de la Red Alterna (zona horaria de México, UTC-6). */
+const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-14T22:00:00-06:00';
+
+/** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
+const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
 
 /** Solo estas 3 suscripciones participan en la Red Alterna. */
 type SuscripcionElegible = 'BASICA' | 'PLUS' | 'NEGOCIOS';
@@ -65,7 +68,9 @@ function esElegible(s: Suscripcion | null | undefined): s is SuscripcionElegible
 
 /** ¿La campaña de la Red Alterna sigue activa en este momento? */
 export function redAlternaActiva(fecha: Date = new Date()): boolean {
-  return fecha.getTime() < new Date(RED_ALTERNA_FIN_ISO).getTime();
+  const inicio = new Date(RED_ALTERNA_INICIO_ISO).getTime();
+  const fin = new Date(RED_ALTERNA_FIN_ISO).getTime();
+  return fecha.getTime() >= inicio && fecha.getTime() < fin;
 }
 
 /**
