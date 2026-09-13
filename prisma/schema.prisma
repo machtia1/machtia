@@ -84,6 +84,10 @@ model User {
 
   slotRestringido SlotRestringido?
 
+  // Red Alterna — regalías que este usuario generó y las que ganó
+  regaliasOrigen      RegaliaRedAlterna[] @relation("RegaliasOrigen")
+  regaliasGanadas     RegaliaRedAlterna[] @relation("RegaliasGanadas")
+
   inactivoDesde DateTime?
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime  @updatedAt
@@ -120,3 +124,34 @@ model Preregistro {
   confirmado        Boolean  @default(false)
   creadoEn          DateTime @default(now())
 }
+
+// ============================================================
+// Red Alterna — Campaña de Lanzamiento
+// ------------------------------------------------------------
+// Registro contable de cada regalía generada. Se calcula al
+// momento en que un usuario activa una suscripción de pago,
+// caminando hasta 5 niveles hacia arriba en la cadena real de
+// invitaciones (invitadoPorId), mientras la fecha de corte de
+// la campaña no se haya cumplido. Ver src/lib/redAlterna.ts.
+// ============================================================
+model RegaliaRedAlterna {
+  id             String      @id @default(cuid())
+
+  // Quién recibe el dinero (el patrocinador, en algún nivel arriba)
+  beneficiarioId String
+  beneficiario   User        @relation("RegaliasGanadas", fields: [beneficiarioId], references: [id])
+
+  // Quién activó la suscripción que generó esta regalía
+  origenId       String
+  origen         User        @relation("RegaliasOrigen", fields: [origenId], references: [id])
+
+  nivel          Int         // 1 a 5 (distancia en la cadena de invitación)
+  monto          Decimal     @db.Decimal(10, 2)
+  tablaAplicada  Suscripcion // BASICA | PLUS | NEGOCIOS — cuál tabla se usó para calcular el monto
+
+  creadoEn       DateTime    @default(now())
+
+  @@index([beneficiarioId])
+  @@index([origenId])
+}
+
