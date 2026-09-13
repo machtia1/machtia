@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, ChevronRight, Menu } from 'lucide-react';
 
 type Role = 'administrador' | 'profesor' | 'socio' | 'usuario' | 'asistente';
@@ -86,12 +87,75 @@ function useCountdown(target: string) {
   return text;
 }
 
+interface SessionUser {
+  id: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  rol: 'ADMINISTRADOR' | 'PROFESOR_FACILITADOR' | 'SOCIO' | 'USUARIO' | 'ASISTENTE_ADMINISTRATIVO';
+  linkInvitacion: string;
+}
+
+function mapRol(rol: SessionUser['rol']): Role {
+  switch (rol) {
+    case 'ADMINISTRADOR':
+      return 'administrador';
+    case 'PROFESOR_FACILITADOR':
+      return 'profesor';
+    case 'SOCIO':
+      return 'socio';
+    case 'ASISTENTE_ADMINISTRATIVO':
+      return 'asistente';
+    default:
+      return 'usuario';
+  }
+}
+
 export default function Dashboard() {
-  const [role, setRole] = useState<Role>('usuario');
+  const router = useRouter();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const countdown = useCountdown('2027-10-20T00:00:00');
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.user) {
+          router.push('/');
+          return;
+        }
+        setUser(data.user);
+      })
+      .finally(() => setLoadingUser(false));
+  }, [router]);
+
+  async function handleLogout(e: React.MouseEvent) {
+    e.preventDefault();
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/');
+    router.refresh();
+  }
+
+  if (loadingUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F6FB] text-[#1C1E2B] text-[14px]">
+        Cargando...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const role = mapRol(user.rol);
+  const nombreCompleto = `${user.nombre} ${user.apellido}`;
+  const primeraLetra = user.nombre.charAt(0).toUpperCase();
+  const linkInvitacion = `clubmachtia.com/r/${user.linkInvitacion}`;
 
   return (
     <div className="flex min-h-screen bg-[#F4F6FB] text-[#1C1E2B]">
@@ -109,7 +173,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-[#F4F6FB] rounded-[10px] px-3 py-2.5 mb-4">
-          <div className="text-[13px] font-semibold">Stephanie Mayra Hernández</div>
+          <div className="text-[13px] font-semibold">{nombreCompleto}</div>
           <div className="text-[11px] font-bold text-cm-primary uppercase tracking-wide">
             {ROLE_LABELS[role]}
           </div>
@@ -196,19 +260,6 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              title="Solo para pruebas"
-              className="text-[12px] font-semibold text-cm-primaryDark border border-[#E4E7EE] rounded-lg px-2 py-1.5 bg-white"
-            >
-              <option value="administrador">Probar como: Administrador</option>
-              <option value="profesor">Probar como: Profesor Facilitador</option>
-              <option value="socio">Probar como: Socio</option>
-              <option value="usuario">Probar como: Usuario</option>
-              <option value="asistente">Probar como: Asistente Administrativo</option>
-            </select>
-
             <button
               onClick={() => alert('Aquí se desplegarían las notificaciones (Elemento 2/3).')}
               className="w-9 h-9 rounded-full border border-[#E4E7EE] flex items-center justify-center relative"
@@ -222,14 +273,18 @@ export default function Dashboard() {
                 onClick={() => setProfileOpen((v) => !v)}
                 className="w-9 h-9 rounded-full bg-cm-primary text-white font-bold text-[13px]"
               >
-                S
+                {primeraLetra}
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-11 bg-white border border-[#E4E7EE] rounded-lg min-w-[200px] shadow-xl p-1.5">
                   <a className="block px-3 py-2 text-[13px] rounded-md hover:bg-[#F4F6FB]">Datos de cuenta</a>
                   <a className="block px-3 py-2 text-[13px] rounded-md hover:bg-[#F4F6FB]">Enlazar Facebook</a>
                   <a className="block px-3 py-2 text-[13px] rounded-md hover:bg-[#F4F6FB]">Enlazar Instagram</a>
-                  <a href="/" className="block px-3 py-2 text-[13px] rounded-md hover:bg-[#F4F6FB] text-red-600">
+                  <a
+                    href="/"
+                    onClick={handleLogout}
+                    className="block px-3 py-2 text-[13px] rounded-md hover:bg-[#F4F6FB] text-red-600"
+                  >
                     Cerrar sesión
                   </a>
                 </div>
@@ -239,7 +294,7 @@ export default function Dashboard() {
         </header>
 
         <div className="p-6 sm:p-8">
-          <h1 className="text-[22px] font-semibold mb-1">Hola, Stephanie 👋</h1>
+          <h1 className="text-[22px] font-semibold mb-1">Hola, {user.nombre} 👋</h1>
           <p className="text-[#6B7280] text-[14px] mb-6">
             Consulta tu estado dentro de Club Machtia y comparte tu invitación.
           </p>
@@ -250,7 +305,7 @@ export default function Dashboard() {
                 Tu link de invitación
               </div>
               <div className="text-[14px] font-semibold text-cm-primaryDark">
-                clubmachtia.com/r/stephanie-mh
+                {linkInvitacion}
               </div>
             </div>
             <button className="bg-cm-primary text-white text-[13px] font-semibold px-4 py-2 rounded-lg">

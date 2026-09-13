@@ -9,10 +9,33 @@ export default function VantageLogin() {
   const [showPass, setShowPass] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    router.push('/home');
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo iniciar sesión');
+        return;
+      }
+      router.push('/home');
+      router.refresh();
+    } catch {
+      setError('Error de conexión, intenta de nuevo');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -110,6 +133,8 @@ export default function VantageLogin() {
                   id="emailField"
                   type="text"
                   required
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
                   placeholder="Correo o usuario"
                   className="card-input"
                 />
@@ -117,6 +142,8 @@ export default function VantageLogin() {
                   <input
                     type={showPass ? 'text' : 'password'}
                     required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Contraseña"
                     className="card-input"
                   />
@@ -130,10 +157,14 @@ export default function VantageLogin() {
                   </button>
                 </div>
 
+                {error && (
+                  <p style={{ color: '#ff8080', fontSize: '12px', margin: '-2px 0 0' }}>{error}</p>
+                )}
+
                 <a href="#" className="forgot">¿Olvidaste tu contraseña?</a>
 
-                <button type="submit" className="watch-button">
-                  Iniciar sesión
+                <button type="submit" disabled={loading} className="watch-button">
+                  {loading ? 'Entrando...' : 'Iniciar sesión'}
                 </button>
               </form>
             </div>

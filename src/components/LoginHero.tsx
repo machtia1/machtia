@@ -9,11 +9,33 @@ import HeroBackground from './HeroBackground';
 export default function LoginHero() {
   const router = useRouter();
   const [showPass, setShowPass] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Etapa 1: sin backend todavía — solo navega al home.
-    router.push('/home');
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo iniciar sesión');
+        return;
+      }
+      router.push('/home');
+      router.refresh();
+    } catch {
+      setError('Error de conexión, intenta de nuevo');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -50,6 +72,8 @@ export default function LoginHero() {
                   <input
                     type="text"
                     required
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
                     placeholder="tucorreo@ejemplo.com"
                     className="w-full h-[46px] px-4 rounded-[10px] bg-white/[0.07] border border-white/10 text-white text-[14px] placeholder:text-white/30 outline-none focus:border-cm-accent transition-colors"
                   />
@@ -63,6 +87,8 @@ export default function LoginHero() {
                     <input
                       type={showPass ? 'text' : 'password'}
                       required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full h-[46px] px-4 pr-11 rounded-[10px] bg-white/[0.07] border border-white/10 text-white text-[14px] placeholder:text-white/30 outline-none focus:border-cm-accent transition-colors"
                     />
@@ -77,6 +103,10 @@ export default function LoginHero() {
                   </div>
                 </div>
 
+                {error && (
+                  <p className="text-red-400 text-[13px] -mt-1">{error}</p>
+                )}
+
                 <div className="flex justify-end -mt-1">
                   <a href="#" className="text-cm-accent text-[13px] font-medium hover:underline">
                     ¿Olvidaste tu contraseña?
@@ -85,9 +115,10 @@ export default function LoginHero() {
 
                 <button
                   type="submit"
-                  className="w-full h-[48px] mt-2 rounded-[10px] bg-white text-cm-primaryDark text-[14px] font-semibold hover:bg-white/90 transition-colors"
+                  disabled={loading}
+                  className="w-full h-[48px] mt-2 rounded-[10px] bg-white text-cm-primaryDark text-[14px] font-semibold hover:bg-white/90 transition-colors disabled:opacity-60"
                 >
-                  Iniciar sesión
+                  {loading ? 'Entrando...' : 'Iniciar sesión'}
                 </button>
               </form>
             </Animate>
