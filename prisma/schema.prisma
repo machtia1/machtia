@@ -94,6 +94,7 @@ model User {
 
   @@index([invitadoPorId])
   @@index([padreRedId])
+  @@unique([padreRedId, ladoEnPadre])
 }
 
 // Los primeros 8 niveles de la Red General: existen como espacios fijos
