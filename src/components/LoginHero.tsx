@@ -108,7 +108,7 @@ export default function LoginHero() {
                 )}
 
                 <div className="flex justify-end -mt-1">
-                  <a href="#" className="text-cm-accent text-[13px] font-medium hover:underline">
+                  <a href="/recuperar" className="text-cm-accent text-[13px] font-medium hover:underline">
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>

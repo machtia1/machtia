@@ -161,7 +161,7 @@ export default function VantageLogin() {
                   <p style={{ color: '#ff8080', fontSize: '12px', margin: '-2px 0 0' }}>{error}</p>
                 )}
 
-                <a href="#" className="forgot">¿Olvidaste tu contraseña?</a>
+                <a href="/recuperar" className="forgot">¿Olvidaste tu contraseña?</a>
 
                 <button type="submit" disabled={loading} className="watch-button">
                   {loading ? 'Entrando...' : 'Iniciar sesión'}
