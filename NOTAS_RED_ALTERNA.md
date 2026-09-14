@@ -93,3 +93,14 @@ empezado la campaña, no solo que no haya terminado.
   puede ser de hasta $8,500 MXN.
 - Estos dos puntos son administrativos/contractuales — vale la pena
   dejarlos por escrito en el contrato mismo, no solo en WhatsApp.
+
+## Actualización — nueva fecha de inicio (14 sept 2026, noche)
+
+Daniel movió el inicio original (lunes 14, 10pm) para dar más tiempo
+a la gente ya registrada:
+
+- **Nuevo inicio:** martes 15 de septiembre 2026, 6:00 PM hora Centro
+  de México
+- **Corte (sin cambios):** 30 de octubre 2026, 10:00 PM misma zona
+
+Se actualizó `RED_ALTERNA_INICIO_ISO` en `src/lib/redAlterna.ts`.
