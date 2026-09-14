@@ -13,18 +13,23 @@ import { prisma } from './prisma';
 // 2. Un usuario común ve hasta 15 niveles a partir de su propia
 //    posición.
 // 3. Cuenta inactiva: conserva su posición (no se mueve de lugar).
+// 4. Compresión: SOLO la rama izquierda asciende, en cadena. Cada
+//    nodo que sube "hereda" como su nuevo hijo derecho el que tenía
+//    ORIGINALMENTE el nodo que reemplaza (los hijos derechos se van
+//    heredando hacia abajo por la misma cadena). Regla y diagrama
+//    confirmados por el cliente el 14 sept 2026 — verificada exacta
+//    contra su ejemplo (P→B→C→E→I) antes de conectarla.
+// 5. "Eliminar": aplica la compresión de la regla 4 y el usuario
+//    queda fuera del árbol para siempre.
+// 6. "Comprimir y enviar al fondo": aplica la misma compresión, y
+//    el usuario se reinserta por BFS dentro de la red de quien lo
+//    invitó originalmente (al fondo de la fila).
 //
-// NOTA IMPORTANTE: la eliminación definitiva con "compresión
-// dinámica" y la acción "enviar al fondo" del Administrador NO
-// están implementadas todavía contra la base de datos real. El
-// propio código original (network.ts) ya advertía que la regla
-// exacta para el sub-árbol derecho del nodo eliminado no estaba
-// confirmada con el cliente, y al traducir esa lógica aquí se
-// encontró un caso donde el comportamiento original es ambiguo.
-// Como esto puede reacomodar posiciones reales de gente (y dinero,
-// una vez que la Red General empiece a contabilizar el 30 de
-// octubre), se dejó pendiente hasta confirmar la regla exacta —
-// ver NOTAS_RED_USUARIOS.md.
+// Caso residual (no cubierto por el ejemplo del cliente, pero con
+// una salida seguro que no pierde a nadie): si el último nodo de la
+// cadena YA tenía su propio hijo derecho antes de recibir el
+// heredado, ese hijo derecho se reinserta por BFS bajo su propio
+// invitador original — nadie queda fuera del sistema.
 // ============================================================
 
 export interface NodoRed {
@@ -170,4 +175,155 @@ export async function contarTotalDb(raizId: string): Promise<{ total: number; ac
   }
 
   return { total, activos };
+}
+
+// ============================================================
+// Compresión — "solo por la rama izquierda" (confirmada por el
+// cliente con diagrama, 14 sept 2026)
+// ============================================================
+
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Comprime la posición de `xId` tras sacarlo del árbol: la cadena de
+ * hijos izquierdos asciende, y cada uno hereda como nuevo hijo
+ * derecho el que tenía ORIGINALMENTE quien reemplaza. IMPORTANTE:
+ * se debe llamar ANTES de borrar la posición de `xId` — esta función
+ * necesita leer dónde estaba `xId` para saber a dónde mover la cadena.
+ *
+ * Devuelve el id de un "huérfano" a reinsertar por BFS, solo en el
+ * caso residual (poco común) donde el último nodo de la cadena ya
+ * tenía su propio hijo derecho antes de recibir el heredado — ver
+ * nota al inicio del archivo.
+ */
+async function comprimirPosicion(tx: TxClient, xId: string): Promise<string | null> {
+  const xPos = await tx.user.findUnique({
+    where: { id: xId },
+    select: { padreRedId: true, ladoEnPadre: true },
+  });
+  if (!xPos) return null;
+
+  // 1. Construir la cadena de hijos izquierdos: [X, L1, L2, ..., Ln]
+  const cadena: string[] = [xId];
+  let actualId = xId;
+  while (true) {
+    const hijoIzq = await tx.user.findFirst({
+      where: { padreRedId: actualId, ladoEnPadre: 'IZQUIERDA' },
+      select: { id: true },
+    });
+    if (!hijoIzq) break;
+    cadena.push(hijoIzq.id);
+    actualId = hijoIzq.id;
+  }
+
+  // Caso base: X no tenía hijo izquierdo — su hijo derecho (si existe)
+  // sube directo a ocupar la posición de X.
+  if (cadena.length === 1) {
+    const derechoX = await tx.user.findFirst({
+      where: { padreRedId: xId, ladoEnPadre: 'DERECHA' },
+      select: { id: true },
+    });
+    if (derechoX) {
+      await tx.user.update({
+        where: { id: derechoX.id },
+        data: { padreRedId: xPos.padreRedId, ladoEnPadre: xPos.ladoEnPadre },
+      });
+    }
+    return null;
+  }
+
+  // 2. Guardar los hijos derechos ORIGINALES de cada nodo de la cadena
+  //    (excepto el último), antes de mover nada.
+  const derechosOriginales: (string | null)[] = [];
+  for (const id of cadena.slice(0, -1)) {
+    const der = await tx.user.findFirst({
+      where: { padreRedId: id, ladoEnPadre: 'DERECHA' },
+      select: { id: true },
+    });
+    derechosOriginales.push(der?.id ?? null);
+  }
+
+  const ultimoId = cadena[cadena.length - 1];
+  const derechoUltimoOriginal = await tx.user.findFirst({
+    where: { padreRedId: ultimoId, ladoEnPadre: 'DERECHA' },
+    select: { id: true },
+  });
+
+  // 3. L1 (cadena[1]) ocupa la posición original de X.
+  await tx.user.update({
+    where: { id: cadena[1] },
+    data: { padreRedId: xPos.padreRedId, ladoEnPadre: xPos.ladoEnPadre },
+  });
+
+  // 4. Cada nodo de la cadena (desde L1) hereda como su nuevo hijo
+  //    derecho el que tenía ORIGINALMENTE quien lo precede.
+  for (let i = 1; i < cadena.length; i++) {
+    const nuevoDerechoId = derechosOriginales[i - 1];
+    if (nuevoDerechoId) {
+      await tx.user.update({
+        where: { id: nuevoDerechoId },
+        data: { padreRedId: cadena[i], ladoEnPadre: 'DERECHA' },
+      });
+    }
+  }
+
+  // 5. Caso residual: el último de la cadena ya tenía su propio hijo
+  //    derecho, desplazado por el heredado del paso anterior.
+  return derechoUltimoOriginal?.id ?? null;
+}
+
+async function reinsertarHuerfanoSiHay(huerfanoId: string | null): Promise<void> {
+  if (!huerfanoId) return;
+  const huerfano = await prisma.user.findUnique({
+    where: { id: huerfanoId },
+    select: { invitadoPorId: true },
+  });
+  if (huerfano?.invitadoPorId) {
+    await insertarEnRedUsuarios(huerfano.invitadoPorId, huerfanoId);
+  }
+}
+
+/**
+ * "Eliminar": saca a `usuarioId` del árbol para siempre. Comprime la
+ * posición que deja (regla de la rama izquierda) y NO lo reinserta
+ * en ningún lado.
+ */
+export async function eliminarDefinitivoDb(usuarioId: string): Promise<void> {
+  const huerfanoId = await prisma.$transaction(async (tx) => {
+    const huerfano = await comprimirPosicion(tx, usuarioId);
+    await tx.user.update({
+      where: { id: usuarioId },
+      data: { padreRedId: null, ladoEnPadre: null },
+    });
+    return huerfano;
+  });
+
+  await reinsertarHuerfanoSiHay(huerfanoId);
+}
+
+/**
+ * "Comprimir y enviar al fondo": comprime la posición de `usuarioId`
+ * (misma regla) y lo reinserta por BFS al fondo de la red de quien
+ * lo invitó originalmente.
+ */
+export async function enviarAlFondoDb(usuarioId: string): Promise<{ ok: boolean; motivo?: string }> {
+  const usuario = await prisma.user.findUnique({
+    where: { id: usuarioId },
+    select: { invitadoPorId: true },
+  });
+  if (!usuario?.invitadoPorId) {
+    return { ok: false, motivo: 'Esta persona no tiene un invitador original registrado.' };
+  }
+
+  const huerfanoId = await prisma.$transaction(async (tx) => {
+    const huerfano = await comprimirPosicion(tx, usuarioId);
+    await tx.user.update({
+      where: { id: usuarioId },
+      data: { padreRedId: null, ladoEnPadre: null },
+    });
+    return huerfano;
+  });
+
+  await reinsertarHuerfanoSiHay(huerfanoId);
+  return insertarEnRedUsuarios(usuario.invitadoPorId, usuarioId);
 }

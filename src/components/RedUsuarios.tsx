@@ -79,6 +79,58 @@ export default function RedUsuarios() {
     }
   }
 
+  async function eliminarDefinitivo() {
+    if (!seleccionado || !datos || seleccionado.id === datos.raiz.id) return;
+    const ok = window.confirm(
+      `¿Eliminar definitivamente a ${seleccionado.nombre}? Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/red/eliminar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: seleccionado.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo eliminar');
+        return;
+      }
+      setSeleccionado(null);
+      await cargar();
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  async function enviarAlFondo() {
+    if (!seleccionado || !datos || seleccionado.id === datos.raiz.id) return;
+    const ok = window.confirm(
+      `¿Enviar a ${seleccionado.nombre} al fondo de su red original? Su posición actual se libera y se reinserta al final.`
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/red/enviar-al-fondo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId: seleccionado.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo enviar al fondo');
+        return;
+      }
+      setSeleccionado(null);
+      await cargar();
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   if (cargando) {
     return <div className="p-8 text-[14px] text-[#6B7280]">Cargando tu red...</div>;
   }
@@ -185,13 +237,29 @@ export default function RedUsuarios() {
                   {nodoSeleccionadoEsRaiz && <span className="text-[#6B7280]"> (tú, no editable)</span>}
                 </p>
                 {datos.esAdministrador && !nodoSeleccionadoEsRaiz && (
-                  <button
-                    disabled={procesando || statusSeleccionado === 'INACTIVA'}
-                    onClick={marcarInactivo}
-                    className="w-full text-[12px] font-semibold px-3 py-2 rounded-lg border border-amber-300 text-amber-700 disabled:opacity-30"
-                  >
-                    {statusSeleccionado === 'INACTIVA' ? 'Ya está inactivo' : 'Marcar inactivo (no renovó)'}
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      disabled={procesando || statusSeleccionado === 'INACTIVA'}
+                      onClick={marcarInactivo}
+                      className="w-full text-[12px] font-semibold px-3 py-2 rounded-lg border border-amber-300 text-amber-700 disabled:opacity-30"
+                    >
+                      {statusSeleccionado === 'INACTIVA' ? 'Ya está inactivo' : 'Marcar inactivo (no renovó)'}
+                    </button>
+                    <button
+                      disabled={procesando}
+                      onClick={enviarAlFondo}
+                      className="w-full text-[12px] font-semibold px-3 py-2 rounded-lg border border-[#E4E7EE] disabled:opacity-30"
+                    >
+                      Comprimir y enviar al fondo
+                    </button>
+                    <button
+                      disabled={procesando}
+                      onClick={eliminarDefinitivo}
+                      className="w-full text-[12px] font-semibold px-3 py-2 rounded-lg border border-red-300 text-red-600 disabled:opacity-30"
+                    >
+                      Eliminar definitivo + comprimir
+                    </button>
+                  </div>
                 )}
               </>
             ) : (
@@ -201,10 +269,10 @@ export default function RedUsuarios() {
 
           {datos.esAdministrador && (
             <p className="text-[11px] text-[#6B7280] bg-[#F4F6FB] rounded-xl p-3">
-              Como Administrador, puedes marcar cuentas como inactivas. Las acciones de
-              "eliminar definitivo + comprimir" y "enviar al fondo" todavía no están disponibles
-              aquí — la regla exacta para reacomodar posiciones está pendiente de confirmar con
-              el cliente antes de aplicarla contra datos reales.
+              "Eliminar" saca a la persona del árbol para siempre. "Comprimir y enviar al fondo"
+              libera su posición y la reinserta al final de la red de quien la invitó
+              originalmente. En ambos casos, la compresión sigue solo la rama izquierda —
+              nadie más pierde su lugar.
             </p>
           )}
         </div>
