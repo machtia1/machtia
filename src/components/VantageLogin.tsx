@@ -14,6 +14,13 @@ export default function VantageLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  function goToLogin() {
+    setMenuOpen(false);
+    const el = document.getElementById('emailField');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => el?.focus({ preventScroll: true }), 350);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -76,7 +83,7 @@ export default function VantageLogin() {
               <span>Lanzamiento&nbsp; • &nbsp;20 oct 2027</span>
             </div>
 
-            <button className="sign-up" onClick={() => document.getElementById('emailField')?.focus()}>
+            <button className="sign-up" onClick={goToLogin}>
               Crear cuenta
             </button>
           </div>
@@ -111,7 +118,7 @@ export default function VantageLogin() {
 
             <button
               className="primary-cta"
-              onClick={() => document.getElementById('emailField')?.focus()}
+              onClick={goToLogin}
             >
               <span className="label">Empezar ahora</span>
               <span className="arrow-box">
