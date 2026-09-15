@@ -50,6 +50,7 @@ export default function VantageLogin() {
             playsInline
             disablePictureInPicture
             aria-hidden="true"
+            poster="/videos/hero-bg-poster.jpg"
             src="/videos/hero-bg.mp4"
             onError={() => setVideoFailed(true)}
           />
@@ -350,26 +351,28 @@ export default function VantageLogin() {
 
         @media (max-width: 640px) {
           .header-actions { display: none; }
-          .menu-toggle { display: flex; }
+          .menu-toggle { display: flex; position: relative; z-index: 21; }
 
           .header.menu-open .header-actions {
             display: flex;
-            position: absolute;
-            top: 56px;
-            right: 0;
-            left: auto;
+            position: fixed;
+            inset: 0;
+            z-index: 20;
             flex-direction: column;
             align-items: flex-start;
-            gap: 16px;
-            padding: 20px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,.13);
-            background: linear-gradient(145deg, rgba(24,22,20,.9), rgba(5,12,14,.94));
+            justify-content: center;
+            gap: 28px;
+            padding: 32px var(--gutter-start);
+            border-radius: 0;
+            border: none;
+            background: linear-gradient(145deg, rgba(10,8,7,.98), rgba(4,10,12,.98));
             backdrop-filter: blur(18px) saturate(108%);
-            min-width: 200px;
+            min-width: 0;
           }
-          .header.menu-open .nav { flex-direction: column; gap: 12px; }
+          .header.menu-open .nav { flex-direction: column; gap: 20px; }
+          .header.menu-open .nav a { font-size: 20px; }
           .header.menu-open .time-panel { display: block; border: none; padding: 0; }
+          .header.menu-open .sign-up { width: 100%; text-align: center; }
         }
 
         .hero {
@@ -607,6 +610,16 @@ export default function VantageLogin() {
           .background,
           .vignette {
             position: fixed;
+          }
+
+          .background {
+            display: none;
+          }
+
+          .screen {
+            background-image: url('/videos/hero-bg-poster.jpg');
+            background-size: cover;
+            background-position: center;
           }
 
           .header {
