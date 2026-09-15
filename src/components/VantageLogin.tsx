@@ -352,6 +352,11 @@ export default function VantageLogin() {
         @media (max-width: 640px) {
           .header-actions { display: none; }
           .menu-toggle { display: flex; position: relative; z-index: 21; }
+          .header.menu-open {
+            animation: none;
+            transform: none;
+          }
+
           .header.menu-open .brand { position: relative; z-index: 21; }
 
           .header.menu-open .header-actions {
