@@ -3,6 +3,32 @@ import { put } from '@vercel/blob';
 import { prisma } from '@/lib/prisma';
 
 const SUSCRIPCIONES_VALIDAS = ['BASICA', 'PLUS', 'NEGOCIOS'] as const;
+
+// Opciones que solo existen para espacios restringidos (Red General).
+// Todas generan regalías con la misma mecánica que Negocios (confirmado
+// por el cliente el 15 sept 2026); el "rol" define sus permisos reales
+// dentro de la plataforma, y son independientes de la suscripción.
+const OPCIONES_RESTRINGIDO = [
+  'SOCIO_FUNDADOR',
+  'ASOCIADO',
+  'PROFESOR_FACILITADOR',
+  'ASISTENTE_ADMINISTRATIVO',
+] as const;
+
+const ROL_POR_OPCION_RESTRINGIDA: Record<(typeof OPCIONES_RESTRINGIDO)[number], string> = {
+  SOCIO_FUNDADOR: 'SOCIO',
+  ASOCIADO: 'USUARIO',
+  PROFESOR_FACILITADOR: 'PROFESOR_FACILITADOR',
+  ASISTENTE_ADMINISTRATIVO: 'ASISTENTE_ADMINISTRATIVO',
+};
+
+const SUSCRIPCION_POR_OPCION_RESTRINGIDA: Record<(typeof OPCIONES_RESTRINGIDO)[number], string> = {
+  SOCIO_FUNDADOR: 'SOCIO_FUNDADOR',
+  ASOCIADO: 'ASOCIADO',
+  PROFESOR_FACILITADOR: 'NEGOCIOS',
+  ASISTENTE_ADMINISTRATIVO: 'NEGOCIOS',
+};
+
 const TAMANO_MAX_COMPROBANTE = 4 * 1024 * 1024; // 4 MB (Vercel limita el cuerpo de la petición a 4.5 MB)
 
 export async function POST(request: Request) {
@@ -34,7 +60,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan datos o la contraseña es muy corta (mínimo 8 caracteres)' }, { status: 400 });
     }
 
-    if (!suscripcion || !SUSCRIPCIONES_VALIDAS.includes(suscripcion as any)) {
+    if (!suscripcion) {
       return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
     }
 
@@ -55,12 +81,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ya existe una cuenta con este correo' }, { status: 409 });
     }
 
-    const invitador = await prisma.user.findUnique({
-      where: { linkInvitacion: preregistro.invitadorSlug },
-      select: { id: true },
-    });
-    if (!invitador) {
-      return NextResponse.json({ error: 'El invitador original ya no está disponible' }, { status: 404 });
+    const esRestringido = !!preregistro.slotRestringidoId;
+
+    let invitadorId: string | null = null;
+    let rolFinal: string | undefined;
+    let suscripcionFinal: string;
+
+    if (esRestringido) {
+      if (!OPCIONES_RESTRINGIDO.includes(suscripcion as (typeof OPCIONES_RESTRINGIDO)[number])) {
+        return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
+      }
+      const opcion = suscripcion as (typeof OPCIONES_RESTRINGIDO)[number];
+      rolFinal = ROL_POR_OPCION_RESTRINGIDA[opcion];
+      suscripcionFinal = SUSCRIPCION_POR_OPCION_RESTRINGIDA[opcion];
+      // Las personas de espacios restringidos son raíz de su propia red,
+      // fuera del árbol de referidos normal — sin invitadoPorId.
+    } else {
+      if (!SUSCRIPCIONES_VALIDAS.includes(suscripcion as any)) {
+        return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
+      }
+      suscripcionFinal = suscripcion;
+
+      const invitador = await prisma.user.findUnique({
+        where: { linkInvitacion: preregistro.invitadorSlug ?? undefined },
+        select: { id: true },
+      });
+      if (!invitador) {
+        return NextResponse.json({ error: 'El invitador original ya no está disponible' }, { status: 404 });
+      }
+      invitadorId = invitador.id;
     }
 
     // Sube el comprobante a Vercel Blob (requiere BLOB_READ_WRITE_TOKEN
@@ -87,11 +136,12 @@ export async function POST(request: Request) {
         telefono,
         estadoProvincia,
         ciudad,
-        suscripcion: suscripcion as (typeof SUSCRIPCIONES_VALIDAS)[number],
+        suscripcion: suscripcionFinal as (typeof SUSCRIPCIONES_VALIDAS)[number],
+        ...(rolFinal ? { rol: rolFinal as any } : {}),
         comprobantePagoUrl: blob.url,
         correoConfirmado: true,
         status: 'PENDIENTE_APROBACION', // Un Administrador debe aprobar el comprobante.
-        invitadoPorId: invitador.id,
+        invitadoPorId: invitadorId,
       },
     });
 
@@ -99,6 +149,13 @@ export async function POST(request: Request) {
       where: { id: preregistro.id },
       data: { confirmado: true },
     });
+
+    if (esRestringido && preregistro.slotRestringidoId) {
+      await prisma.slotRestringido.update({
+        where: { id: preregistro.slotRestringidoId },
+        data: { status: 'OCUPADO', inviteLink: null, usuarioId: nuevoUsuario.id },
+      });
+    }
 
     return NextResponse.json({
       ok: true,

@@ -49,8 +49,17 @@ const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-15
 /** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
 const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
 
-/** Solo estas 3 suscripciones participan en la Red Alterna. */
+/** Solo estas 3 tablas de comisión existen de verdad. */
 type SuscripcionElegible = 'BASICA' | 'PLUS' | 'NEGOCIOS';
+
+/**
+ * Suscripciones que SÍ generan regalías. Socio Fundador y Asociado
+ * (espacios restringidos de la Red General) participan con la misma
+ * mecánica que Negocios — confirmado por el cliente el 15 sept 2026 —
+ * pero se normalizan a la tabla NEGOCIOS antes de calcular el monto,
+ * para que `tablaAplicada` siempre sea una de las 3 tablas reales.
+ */
+type SuscripcionAmplia = SuscripcionElegible | 'SOCIO_FUNDADOR' | 'ASOCIADO';
 
 const RANGO: Record<SuscripcionElegible, number> = {
   BASICA: 0,
@@ -65,8 +74,14 @@ const TABLAS: Record<SuscripcionElegible, Record<number, number>> = {
   NEGOCIOS: { 1: 40.0, 2: 20.0, 3: 20.0, 4: 20.0, 5: 10.0 },
 };
 
-function esElegible(s: Suscripcion | null | undefined): s is SuscripcionElegible {
-  return s === 'BASICA' || s === 'PLUS' || s === 'NEGOCIOS';
+function esElegible(s: Suscripcion | null | undefined): s is SuscripcionAmplia {
+  return s === 'BASICA' || s === 'PLUS' || s === 'NEGOCIOS' || s === 'SOCIO_FUNDADOR' || s === 'ASOCIADO';
+}
+
+/** Socio Fundador y Asociado calculan exactamente como Negocios. */
+function tablaEfectiva(s: SuscripcionAmplia): SuscripcionElegible {
+  if (s === 'SOCIO_FUNDADOR' || s === 'ASOCIADO') return 'NEGOCIOS';
+  return s;
 }
 
 /** Estado puntual de la Red Alterna: aún no empieza, activa en este momento, o ya cerró. */
@@ -120,7 +135,7 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
     return; // Sin suscripción elegible, no genera regalías.
   }
 
-  const susOrigen = nuevoUsuario.suscripcion;
+  const susOrigen = tablaEfectiva(nuevoUsuario.suscripcion);
 
   let ancestroId = nuevoUsuario.invitadoPorId;
   let nivel = 1;
@@ -134,8 +149,8 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
     if (!ancestro) break;
 
     if (esElegible(ancestro.suscripcion)) {
-      const tablaAplicada =
-        RANGO[ancestro.suscripcion] <= RANGO[susOrigen] ? ancestro.suscripcion : susOrigen;
+      const susAncestro = tablaEfectiva(ancestro.suscripcion);
+      const tablaAplicada = RANGO[susAncestro] <= RANGO[susOrigen] ? susAncestro : susOrigen;
 
       const monto = TABLAS[tablaAplicada][nivel];
 
@@ -173,4 +188,34 @@ export async function resumenRegaliasUsuario(usuarioId: string) {
   }
 
   return { total, porNivel, movimientos: regalias, activa: redAlternaActiva(), estado: estadoRedAlterna() };
+}
+
+/** Tabla de comisiones completa (para mostrar la explicación por nivel en la pantalla de Campaña de Lanzamiento). */
+export const TABLA_COMISIONES = TABLAS;
+
+/**
+ * Cuenta cuánta gente real tiene un usuario en cada uno de los 5
+ * niveles de su cadena de invitación (hacia abajo, no hacia arriba),
+ * para dibujar el árbol de la pantalla de Campaña de Lanzamiento.
+ */
+export async function arbolRedAlterna(usuarioId: string) {
+  const niveles: { nivel: number; personas: number }[] = [];
+  let idsNivelActual = [usuarioId];
+
+  for (let nivel = 1; nivel <= 5; nivel++) {
+    const hijos = await prisma.user.findMany({
+      where: { invitadoPorId: { in: idsNivelActual } },
+      select: { id: true },
+    });
+    niveles.push({ nivel, personas: hijos.length });
+    idsNivelActual = hijos.map((h) => h.id);
+    if (idsNivelActual.length === 0) break;
+  }
+
+  // Rellena los niveles restantes en 0 si la cadena se acabó antes de nivel 5.
+  while (niveles.length < 5) {
+    niveles.push({ nivel: niveles.length + 1, personas: 0 });
+  }
+
+  return { niveles, estado: estadoRedAlterna() };
 }

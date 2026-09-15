@@ -7,22 +7,35 @@ const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
-    const { nombre, correo, invitadorLinkId } = await request.json();
+    const { nombre, correo, invitadorLinkId, slotToken } = await request.json();
 
     if (!nombre?.trim() || !correo?.trim() || !CORREO_VALIDO.test(correo)) {
       return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
     }
 
-    if (!invitadorLinkId) {
+    if (!invitadorLinkId && !slotToken) {
       return NextResponse.json({ error: 'Falta el enlace de invitación' }, { status: 400 });
     }
 
-    const invitador = await prisma.user.findUnique({
-      where: { linkInvitacion: invitadorLinkId },
-      select: { id: true },
-    });
-    if (!invitador) {
-      return NextResponse.json({ error: 'El enlace de invitación no es válido' }, { status: 404 });
+    let slotRestringidoId: string | undefined;
+
+    if (slotToken) {
+      const slot = await prisma.slotRestringido.findUnique({
+        where: { inviteLink: slotToken },
+        select: { id: true, status: true },
+      });
+      if (!slot || slot.status !== 'INVITADO') {
+        return NextResponse.json({ error: 'El enlace de invitación no es válido' }, { status: 404 });
+      }
+      slotRestringidoId = slot.id;
+    } else {
+      const invitador = await prisma.user.findUnique({
+        where: { linkInvitacion: invitadorLinkId },
+        select: { id: true },
+      });
+      if (!invitador) {
+        return NextResponse.json({ error: 'El enlace de invitación no es válido' }, { status: 404 });
+      }
     }
 
     // Evita duplicados: si ya existe un preregistro sin confirmar con
@@ -38,7 +51,8 @@ export async function POST(request: Request) {
         data: {
           nombre: nombre.trim(),
           correo: correo.trim().toLowerCase(),
-          invitadorSlug: invitadorLinkId,
+          invitadorSlug: slotRestringidoId ? null : invitadorLinkId,
+          slotRestringidoId,
           tokenConfirmacion,
         },
       });

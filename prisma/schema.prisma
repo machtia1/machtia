@@ -25,6 +25,7 @@ enum Suscripcion {
   NEGOCIOS
   NINOS
   SOCIO_FUNDADOR
+  ASOCIADO
   CREADOR_DE_CURSOS
 }
 
@@ -118,6 +119,7 @@ model SlotRestringido {
 
   usuarioId String? @unique
   usuario   User?   @relation(fields: [usuarioId], references: [id])
+  preregistros Preregistro[]
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
@@ -130,7 +132,9 @@ model Preregistro {
   id                String   @id @default(cuid())
   nombre            String
   correo            String
-  invitadorSlug     String
+  invitadorSlug     String?
+  slotRestringidoId String?
+  slotRestringido   SlotRestringido? @relation(fields: [slotRestringidoId], references: [id])
   tokenConfirmacion String   @unique
   confirmado        Boolean  @default(false)
   creadoEn          DateTime @default(now())

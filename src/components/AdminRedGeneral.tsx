@@ -56,7 +56,6 @@ export default function AdminRedGeneral() {
   const [error, setError] = useState('');
   const [nivelAbierto, setNivelAbierto] = useState<number>(1);
   const [slotSeleccionadoId, setSlotSeleccionadoId] = useState<string | null>(null);
-  const [form, setForm] = useState({ nombre: '', apellido: '', correo: '', telefono: '', pais: '' });
   const [procesando, setProcesando] = useState(false);
 
   async function cargar() {
@@ -130,11 +129,6 @@ export default function AdminRedGeneral() {
     if (!ok) return;
     await accion('/api/admin/red-general/eliminar', { slotId: slot.id });
     setSlotSeleccionadoId(null);
-  }
-  async function handleRegistrar(slot: Slot) {
-    if (!form.nombre.trim() || !form.apellido.trim() || !form.correo.trim()) return;
-    const ok = await accion('/api/admin/red-general/registrar', { slotId: slot.id, ...form });
-    if (ok) setForm({ nombre: '', apellido: '', correo: '', telefono: '', pais: '' });
   }
 
   if (!slots && !error) {
@@ -248,11 +242,21 @@ export default function AdminRedGeneral() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 text-[12px] bg-[#F4F6FB] rounded-lg px-3 py-2 truncate">
-                          {slotSeleccionado.inviteLink}
+                          machtiaeducacion.com/invitacion-restringida/{slotSeleccionado.inviteLink}
                         </div>
-                        <CopyBtn value={slotSeleccionado.inviteLink!} />
+                        <CopyBtn
+                          value={`machtiaeducacion.com/invitacion-restringida/${slotSeleccionado.inviteLink}`}
+                        />
                       </div>
                     </div>
+
+                    <p className="text-[12px] text-[#6B7280]">
+                      Comparte este link con la persona. Ella hace su propio registro (igual que
+                      cualquier usuario), eligiendo entre Socio Fundador, Asociado, Profesor
+                      Facilitador o Asistente Administrativo. Cuando termine, este espacio va a
+                      pasar a &quot;Ocupado&quot; solo, y su registro va a aparecer en el Panel de
+                      Aprobaciones para que lo revises como cualquier otro.
+                    </p>
 
                     <button
                       disabled={procesando}
@@ -261,51 +265,6 @@ export default function AdminRedGeneral() {
                     >
                       Resetear invitación
                     </button>
-
-                    <div className="border-t border-dashed border-[#E4E7EE] pt-3 mt-1">
-                      <p className="text-[11px] text-[#6B7280] mb-2">
-                        Cuando confirmes que la persona ya aceptó el link, regístrala aquí:
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 mb-2">
-                        <input
-                          placeholder="Nombre"
-                          value={form.nombre}
-                          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                          className="text-[12px] border border-[#E4E7EE] rounded-lg px-2 py-1.5"
-                        />
-                        <input
-                          placeholder="Apellido"
-                          value={form.apellido}
-                          onChange={(e) => setForm({ ...form, apellido: e.target.value })}
-                          className="text-[12px] border border-[#E4E7EE] rounded-lg px-2 py-1.5"
-                        />
-                        <input
-                          placeholder="Correo"
-                          value={form.correo}
-                          onChange={(e) => setForm({ ...form, correo: e.target.value })}
-                          className="text-[12px] border border-[#E4E7EE] rounded-lg px-2 py-1.5 col-span-2"
-                        />
-                        <input
-                          placeholder="Teléfono"
-                          value={form.telefono}
-                          onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                          className="text-[12px] border border-[#E4E7EE] rounded-lg px-2 py-1.5"
-                        />
-                        <input
-                          placeholder="País"
-                          value={form.pais}
-                          onChange={(e) => setForm({ ...form, pais: e.target.value })}
-                          className="text-[12px] border border-[#E4E7EE] rounded-lg px-2 py-1.5"
-                        />
-                      </div>
-                      <button
-                        disabled={procesando}
-                        onClick={() => handleRegistrar(slotSeleccionado)}
-                        className="w-full text-[12px] font-semibold bg-[#1C1E2B] text-white rounded-lg py-2 disabled:opacity-50"
-                      >
-                        Registrar en este espacio
-                      </button>
-                    </div>
                   </div>
                 )}
 

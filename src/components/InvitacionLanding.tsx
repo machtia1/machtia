@@ -7,11 +7,12 @@ const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$/;
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Props {
-  invitadorLinkId: string;
+  invitadorLinkId?: string;
+  slotToken?: string;
   invitadorNombre: string;
 }
 
-export default function InvitacionLanding({ invitadorLinkId, invitadorNombre }: Props) {
+export default function InvitacionLanding({ invitadorLinkId, slotToken, invitadorNombre }: Props) {
   const router = useRouter();
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,7 +85,7 @@ export default function InvitacionLanding({ invitadorLinkId, invitadorNombre }: 
       const res = await fetch('/api/preregistro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, correo, invitadorLinkId }),
+        body: JSON.stringify({ nombre, correo, invitadorLinkId, slotToken }),
       });
       const data = await res.json();
       if (!res.ok) {

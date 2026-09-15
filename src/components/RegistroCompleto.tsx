@@ -8,12 +8,20 @@ interface DatosPreregistro {
   nombre: string;
   correo: string;
   invitadorLinkId: string;
+  esRestringido?: boolean;
 }
 
 const SUSCRIPCIONES = [
   { valor: 'BASICA', etiqueta: 'Básica' },
   { valor: 'PLUS', etiqueta: 'Plus' },
   { valor: 'NEGOCIOS', etiqueta: 'Negocios' },
+] as const;
+
+const SUSCRIPCIONES_RESTRINGIDO = [
+  { valor: 'SOCIO_FUNDADOR', etiqueta: 'Socio Fundador' },
+  { valor: 'ASOCIADO', etiqueta: 'Asociado' },
+  { valor: 'PROFESOR_FACILITADOR', etiqueta: 'Profesor Facilitador' },
+  { valor: 'ASISTENTE_ADMINISTRATIVO', etiqueta: 'Asistente Administrativo' },
 ] as const;
 
 export default function RegistroCompleto({ token }: { token: string }) {
@@ -28,7 +36,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
   const [estadoProvincia, setEstadoProvincia] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [suscripcion, setSuscripcion] = useState<(typeof SUSCRIPCIONES)[number]['valor']>('BASICA');
+  const [suscripcion, setSuscripcion] = useState<string>('BASICA');
   const [password, setPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [comprobante, setComprobante] = useState<File | null>(null);
@@ -38,6 +46,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
   const [completado, setCompletado] = useState(false);
 
   const ladaPais = ladaPorPais(pais);
+  const opcionesSuscripcion = datos?.esRestringido ? SUSCRIPCIONES_RESTRINGIDO : SUSCRIPCIONES;
 
   useEffect(() => {
     fetch(`/api/preregistro/${token}`)
@@ -48,6 +57,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
           return;
         }
         setDatos(data);
+        if (data.esRestringido) setSuscripcion(SUSCRIPCIONES_RESTRINGIDO[0].valor);
       })
       .catch(() => setErrorCarga('Error de conexión'))
       .finally(() => setCargando(false));
@@ -229,8 +239,8 @@ export default function RegistroCompleto({ token }: { token: string }) {
 
           <div>
             <label className="block text-[13px] text-white/70 mb-2">Elige tu suscripción</label>
-            <div className="grid grid-cols-3 gap-2">
-              {SUSCRIPCIONES.map((s) => (
+            <div className={`grid gap-2 ${opcionesSuscripcion.length === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {opcionesSuscripcion.map((s) => (
                 <button
                   type="button"
                   key={s.valor}
