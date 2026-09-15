@@ -60,6 +60,16 @@ model User {
   estadoProvincia String?
   ciudad          String?
 
+  fotoPerfilUrl      String?
+  direccionCalle     String?
+  direccionColonia   String?
+  codigoPostal       String?
+  textoPresentacion  String?
+  redSocialFacebook  String?
+  redSocialInstagram String?
+  redSocialTiktok    String?
+  membresiaExpiraEn  DateTime?
+
   rol           Rol          @default(USUARIO)
   suscripcion   Suscripcion?
   status        EstadoCuenta @default(PENDIENTE_CONFIRMACION)

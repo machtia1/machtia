@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, ChevronRight, Menu } from 'lucide-react';
+import { Bell, Check, ChevronRight, Copy, Menu } from 'lucide-react';
 
 type Role = 'administrador' | 'profesor' | 'socio' | 'usuario' | 'asistente';
 
@@ -32,8 +32,10 @@ const NAV_SECTIONS: { label: string; children?: { label: string; href?: string }
     label: 'Mi Oficina',
     children: [
       { label: 'Mi Red', href: '/home/red-usuarios' },
-      { label: 'Mis Referidos' },
       { label: 'Red 2x15', href: '/home/red-usuarios' },
+      { label: 'Mi Suscripción', href: '/home/mi-oficina/suscripcion' },
+      { label: 'Mis Logros', href: '/home/mi-oficina/logros' },
+      { label: 'Mis Ganancias', href: '/home/mi-oficina/ganancias' },
     ],
   },
   { label: 'Cursos' },
@@ -118,6 +120,7 @@ export default function Dashboard() {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const countdown = useCountdown('2027-10-20T00:00:00');
 
   useEffect(() => {
@@ -256,7 +259,7 @@ export default function Dashboard() {
             <button className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
               <Menu size={20} />
             </button>
-            <a className="text-[14px] font-semibold text-cm-primary hidden md:block">Mis Ganancias</a>
+            <Link href="/home/mi-oficina/ganancias" className="text-[14px] font-semibold text-cm-primary hidden md:block">Mis Ganancias</Link>
             <a className="text-[14px] font-semibold hidden md:block">Tienda</a>
           </div>
 
@@ -299,9 +302,9 @@ export default function Dashboard() {
         </header>
 
         <div className="flex md:hidden items-center gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-[#E4E7EE] sticky top-16 z-10">
-          <a className="shrink-0 text-[13px] font-semibold text-cm-primary bg-[#ECECFF] px-3.5 py-1.5 rounded-full whitespace-nowrap">
+          <Link href="/home/mi-oficina/ganancias" className="shrink-0 text-[13px] font-semibold text-cm-primary bg-[#ECECFF] px-3.5 py-1.5 rounded-full whitespace-nowrap">
             Mis Ganancias
-          </a>
+          </Link>
           <a className="shrink-0 text-[13px] font-semibold bg-[#F4F6FB] border border-[#E4E7EE] px-3.5 py-1.5 rounded-full whitespace-nowrap">
             Tienda
           </a>
@@ -325,8 +328,16 @@ export default function Dashboard() {
                 {linkInvitacion}
               </div>
             </div>
-            <button className="bg-cm-primary text-white text-[13px] font-semibold px-4 py-2 rounded-lg">
-              Copiar enlace
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(linkInvitacion);
+                setLinkCopiado(true);
+                setTimeout(() => setLinkCopiado(false), 2000);
+              }}
+              className="bg-cm-primary text-white text-[13px] font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5"
+            >
+              {linkCopiado ? <Check size={14} /> : <Copy size={14} />}
+              {linkCopiado ? 'Copiado' : 'Copiar enlace'}
             </button>
           </div>
 
