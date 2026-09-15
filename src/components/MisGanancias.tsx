@@ -71,9 +71,18 @@ export default function MisGanancias() {
           )}
           {resumen.estado === 'pendiente' && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-5">
-              La Campaña de Lanzamiento todavía no arranca — empieza el 15 de septiembre a las 6:00
-              p.m. (hora Centro de México). En cuanto inicie, aquí verás tus comisiones en tiempo
-              real.
+              La Campaña de Lanzamiento todavía no arranca — empieza el 16 de septiembre a las
+              12:00 del mediodía (hora Centro de México). En cuanto inicie, aquí verás tus
+              comisiones en tiempo real.
+            </div>
+          )}
+
+          {resumen.estado === 'activa' && (resumen.porNivel[1] ?? 0) === 0 && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 text-[13px] rounded-xl px-4 py-3 mb-5">
+              Todavía no tienes comisiones porque no has invitado a nadie directamente. Invita al
+              menos a 1 persona con tu link personal para empezar a generar comisiones — el resto
+              de tu red puede irse llenando, pero las ganancias solo empiezan cuando tienes tu
+              primer invitado directo.
             </div>
           )}
 

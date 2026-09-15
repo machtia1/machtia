@@ -35,16 +35,16 @@ import { prisma } from './prisma';
 // 4. La Red General NO contabiliza ganancias mientras la Red
 //    Alterna esté activa. Vuelve a contar a partir del corte.
 //
-// 5. Fechas de la campaña — actualizadas el 14 sept 2026: el cliente
-//    movió el inicio original (lunes 14, 10pm) al martes 15 de
-//    septiembre 2026, 6:00 PM hora Centro de México (UTC-6), para
-//    dar una ventana de ~20 horas y que la gente ya registrada
-//    alcance a entrar antes de que empiece a contar. Corte: 30 de
-//    octubre 2026, 10:00 PM misma zona (sin cambios).
+// 5. Fechas de la campaña — actualizadas el 15 sept 2026: el cliente
+//    movió el inicio (que ya había pasado del lunes 14 al martes 15,
+//    6pm) al miércoles 16 de septiembre 2026, 12:00 PM (mediodía)
+//    hora Centro de México (UTC-6), para terminar de acomodar el
+//    arranque. Corte: 30 de octubre 2026, 10:00 PM misma zona (sin
+//    cambios).
 // ============================================================
 
 /** Fecha y hora de INICIO de la Red Alterna (zona horaria de México, UTC-6). */
-const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-15T18:00:00-06:00';
+const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T12:00:00-06:00';
 
 /** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
 const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';

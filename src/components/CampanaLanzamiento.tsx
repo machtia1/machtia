@@ -71,6 +71,20 @@ export default function CampanaLanzamiento() {
             <div className="text-[12px] text-[#6B7280]">Cierra: 30 de octubre de 2026</div>
           </div>
 
+          {datos.estado === 'pendiente' && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-6">
+              La campaña arranca el 16 de septiembre a las 12:00 del mediodía (hora Centro de
+              México).
+            </div>
+          )}
+
+          {datos.estado === 'activa' && (datos.niveles[0]?.personas ?? 0) === 0 && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 text-[13px] rounded-xl px-4 py-3 mb-6">
+              Todavía no tienes comisiones porque no has invitado a nadie directamente. Invita al
+              menos a 1 persona con tu link personal para empezar a generar comisiones.
+            </div>
+          )}
+
           {/* Árbol de 5 niveles */}
           <h2 className="text-[15px] font-semibold mb-3 flex items-center gap-2">
             <Network size={16} className="text-cm-primary" />
