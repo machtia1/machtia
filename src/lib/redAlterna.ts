@@ -69,6 +69,16 @@ function esElegible(s: Suscripcion | null | undefined): s is SuscripcionElegible
   return s === 'BASICA' || s === 'PLUS' || s === 'NEGOCIOS';
 }
 
+/** Estado puntual de la Red Alterna: aún no empieza, activa en este momento, o ya cerró. */
+export function estadoRedAlterna(fecha: Date = new Date()): 'pendiente' | 'activa' | 'cerrada' {
+  const inicio = new Date(RED_ALTERNA_INICIO_ISO).getTime();
+  const fin = new Date(RED_ALTERNA_FIN_ISO).getTime();
+  const ahora = fecha.getTime();
+  if (ahora < inicio) return 'pendiente';
+  if (ahora >= fin) return 'cerrada';
+  return 'activa';
+}
+
 /** ¿La campaña de la Red Alterna sigue activa en este momento? */
 export function redAlternaActiva(fecha: Date = new Date()): boolean {
   const inicio = new Date(RED_ALTERNA_INICIO_ISO).getTime();
@@ -162,5 +172,5 @@ export async function resumenRegaliasUsuario(usuarioId: string) {
     porNivel[r.nivel] = (porNivel[r.nivel] ?? 0) + Number(r.monto);
   }
 
-  return { total, porNivel, movimientos: regalias, activa: redAlternaActiva() };
+  return { total, porNivel, movimientos: regalias, activa: redAlternaActiva(), estado: estadoRedAlterna() };
 }

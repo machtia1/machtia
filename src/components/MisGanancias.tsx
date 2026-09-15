@@ -19,6 +19,7 @@ interface ResumenGanancias {
   porNivel: Record<number, number>;
   movimientos: Movimiento[];
   activa: boolean;
+  estado: 'pendiente' | 'activa' | 'cerrada';
 }
 
 export default function MisGanancias() {
@@ -62,10 +63,17 @@ export default function MisGanancias() {
 
       {resumen && (
         <>
-          {!resumen.activa && (
+          {resumen.estado === 'cerrada' && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-5">
               La Campaña de Lanzamiento ya cerró — a partir de ahora las ganancias las contabiliza
               la Red General.
+            </div>
+          )}
+          {resumen.estado === 'pendiente' && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-5">
+              La Campaña de Lanzamiento todavía no arranca — empieza el 15 de septiembre a las 6:00
+              p.m. (hora Centro de México). En cuanto inicie, aquí verás tus comisiones en tiempo
+              real.
             </div>
           )}
 
