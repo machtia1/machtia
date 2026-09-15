@@ -582,16 +582,61 @@ export default function VantageLogin() {
         }
 
         @media (max-width: 900px) {
-          .hero { display: flex; flex-direction: column; justify-content: flex-end; }
+          .viewport {
+            position: relative;
+            height: auto;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: visible;
+          }
+
+          .screen {
+            position: relative;
+            left: 0;
+            top: 0;
+            transform: none;
+            width: 100%;
+            height: auto;
+            min-height: 100dvh;
+            --display-size: clamp(32px, 9vw, 56px);
+            --display-leading: clamp(40px, 10.5vw, 64px);
+            --copy-size: clamp(13px, 3.6vw, 16px);
+            --copy-leading: clamp(18px, 4.6vw, 22px);
+          }
+
+          .background,
+          .vignette {
+            position: fixed;
+          }
+
+          .header {
+            position: relative;
+            top: auto;
+            left: auto;
+            right: auto;
+            margin: var(--header-top) var(--gutter-start) 0;
+          }
+
+          .hero {
+            position: static;
+            inset: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: calc(100dvh - 96px);
+          }
+
           .demo-card {
             position: static;
-            margin: 0 var(--gutter-start) 20px;
+            margin: 24px var(--gutter-start) 32px;
             width: auto;
           }
+
           .hero-content {
             position: static;
+            width: 100%;
             padding: 20px var(--gutter-start) 24px;
-            margin: 0 calc(var(--gutter-start) * -1);
+            margin: 0;
             max-width: none;
             background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55) 40%, rgba(0,0,0,.72));
           }
