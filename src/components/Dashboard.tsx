@@ -165,11 +165,8 @@ export default function Dashboard() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex items-center gap-2.5 px-2 pb-5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cm-accent to-cm-primary" />
-          <span className="font-bold text-[16px] text-cm-primaryDark leading-tight">
-            Club<br />Machtia
-          </span>
+        <div className="flex items-center px-2 pb-5">
+          <img src="/brand/logo-lockup-color.png" alt="Club Machtia" className="h-9 w-auto" />
         </div>
 
         <div className="bg-[#F4F6FB] rounded-[10px] px-3 py-2.5 mb-4">

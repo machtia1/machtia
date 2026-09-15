@@ -141,8 +141,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
     <div className="min-h-screen bg-[#0A0E27] text-white">
       <div className="max-w-xl mx-auto px-6 py-14">
         <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cm-accent to-cm-primary" />
-          <span className="font-semibold text-[16px]">Club Machtia</span>
+          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="h-8 w-auto" />
         </div>
 
         <h1 className="text-[24px] font-semibold mb-1">Completa tu registro, {datos.nombre}</h1>

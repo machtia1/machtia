@@ -60,8 +60,7 @@ export default function VantageLogin() {
         {/* ---------- HEADER ---------- */}
         <header className={`header ${menuOpen ? 'menu-open' : ''}`}>
           <a href="#" className="brand" aria-label="Club Machtia — inicio">
-            <div className="brand-mark" />
-            <span className="brand-name">Club Machtia</span>
+            <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="brand-logo" />
           </a>
 
           <div className="header-actions" id="tablet-navigation">
@@ -175,7 +174,7 @@ export default function VantageLogin() {
 
       <style jsx>{`
         :root {
-          font-family: 'Inter', Arial, sans-serif;
+          font-family: 'Century Gothic', 'League Spartan', Arial, sans-serif;
         }
 
         .viewport {
@@ -245,19 +244,10 @@ export default function VantageLogin() {
           text-decoration: none;
         }
 
-        .brand-mark {
-          width: 26px;
-          height: 26px;
-          border-radius: 8px;
-          background: conic-gradient(from 45deg, #38B6E0, #2C2A8C);
-          box-shadow: 0 1px 2px rgba(0,0,0,.3);
-        }
-
-        .brand-name {
-          color: #fff;
-          font-weight: 600;
-          font-size: 15px;
-          letter-spacing: -0.02em;
+        .brand-logo {
+          height: 30px;
+          width: auto;
+          display: block;
         }
 
         .header-actions {
@@ -407,7 +397,7 @@ export default function VantageLogin() {
 
         .hero-title {
           margin: 0;
-          font-family: 'Manrope', 'Inter', Arial, sans-serif;
+          font-family: 'Montserrat', 'Century Gothic', Arial, sans-serif;
           font-weight: 600;
           font-size: var(--display-size);
           line-height: var(--display-leading);

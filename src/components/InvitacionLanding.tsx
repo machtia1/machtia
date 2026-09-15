@@ -104,8 +104,7 @@ export default function InvitacionLanding({ invitadorLinkId, invitadorNombre }: 
     <div className="min-h-screen bg-[#0A0E27] text-white">
       <div className="max-w-xl mx-auto px-6 py-14 sm:py-20">
         <div className="flex items-center gap-2.5 mb-10">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cm-accent to-cm-primary" />
-          <span className="font-semibold text-[16px]">Club Machtia</span>
+          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="h-8 w-auto" />
         </div>
 
         {!enviado ? (

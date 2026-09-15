@@ -93,8 +93,7 @@ export default function RestablecerPassword({ token }: { token: string }) {
     <div className="min-h-screen bg-[#0A0E27] text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-2.5 mb-8 justify-center">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cm-accent to-cm-primary" />
-          <span className="font-semibold text-[16px]">Club Machtia</span>
+          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="h-8 w-auto" />
         </div>
 
         <div className="bg-white/[0.05] border border-white/10 rounded-2xl p-8">
