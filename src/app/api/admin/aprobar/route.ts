@@ -26,9 +26,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este usuario ya fue procesado antes' }, { status: 409 });
   }
 
+  const ahora = new Date();
+  const expiraEn = new Date(ahora);
+  expiraEn.setDate(expiraEn.getDate() + 365); // Cada membresía/suscripción dura 365 días, confirmado por el cliente
+
   await prisma.user.update({
     where: { id: usuarioId },
-    data: { status: 'ACTIVA' },
+    data: { status: 'ACTIVA', membresiaExpiraEn: expiraEn },
   });
 
   // Coloca al usuario en la Red de Usuarios (árbol binario), dentro

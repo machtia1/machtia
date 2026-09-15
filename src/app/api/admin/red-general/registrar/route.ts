@@ -31,6 +31,9 @@ export async function POST(request: Request) {
   // describe la regla del cliente. No se le asigna contraseña aquí —
   // queda pendiente un flujo de "crear tu contraseña" para que pueda
   // iniciar sesión (ver NOTAS_RED_USUARIOS.md).
+  const expiraEnRestringido = new Date();
+  expiraEnRestringido.setDate(expiraEnRestringido.getDate() + 365); // 365 días, misma regla que el resto de las membresías
+
   const nuevoUsuario = await prisma.user.create({
     data: {
       nombre: nombre.trim(),
@@ -40,6 +43,7 @@ export async function POST(request: Request) {
       pais: pais?.trim() || null,
       status: 'ACTIVA',
       correoConfirmado: true,
+      membresiaExpiraEn: expiraEnRestringido,
     },
   });
 
