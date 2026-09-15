@@ -352,11 +352,14 @@ export default function VantageLogin() {
         @media (max-width: 640px) {
           .header-actions { display: none; }
           .menu-toggle { display: flex; position: relative; z-index: 21; }
+          .header.menu-open .brand { position: relative; z-index: 21; }
 
           .header.menu-open .header-actions {
             display: flex;
             position: fixed;
             inset: 0;
+            width: 100%;
+            height: 100%;
             z-index: 20;
             flex-direction: column;
             align-items: flex-start;
@@ -365,8 +368,7 @@ export default function VantageLogin() {
             padding: 32px var(--gutter-start);
             border-radius: 0;
             border: none;
-            background: linear-gradient(145deg, rgba(10,8,7,.98), rgba(4,10,12,.98));
-            backdrop-filter: blur(18px) saturate(108%);
+            background: #0A0705;
             min-width: 0;
           }
           .header.menu-open .nav { flex-direction: column; gap: 20px; }
