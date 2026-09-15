@@ -80,7 +80,7 @@ export default function VantageLogin() {
 
             <div className="time-panel">
               <label>Campaña</label>
-              <span>Lanzamiento&nbsp; • &nbsp;20 oct 2027</span>
+              <span>Lanzamiento&nbsp; • &nbsp;30 oct 2026</span>
             </div>
 
             <button className="sign-up" onClick={goToLogin}>

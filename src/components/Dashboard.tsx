@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, Check, ChevronRight, Copy, Menu } from 'lucide-react';
+import { useCountdown } from '@/lib/useCountdown';
 
 type Role = 'administrador' | 'profesor' | 'socio' | 'usuario' | 'asistente';
 
@@ -27,67 +28,36 @@ const ROLE_NOTES: Record<Role, string> = {
     'Sesión de Asistente Administrativo: puedes editar anuncios, revisar contenido y moderar foros.',
 };
 
-const NAV_SECTIONS: { label: string; children?: { label: string; href?: string }[] }[] = [
+const NAV_SECTIONS: { label: string; href?: string; children?: { label: string; href?: string }[] }[] = [
   {
     label: 'Mi Oficina',
     children: [
-      { label: 'Mi Red', href: '/home/red-usuarios' },
-      { label: 'Red 2x15', href: '/home/red-usuarios' },
       { label: 'Mi Suscripción', href: '/home/mi-oficina/suscripcion' },
       { label: 'Mis Logros', href: '/home/mi-oficina/logros' },
       { label: 'Mis Ganancias', href: '/home/mi-oficina/ganancias' },
     ],
   },
-  { label: 'Cursos' },
-  { label: 'Talleres' },
-  { label: 'Biblioteca Digital' },
   {
-    label: 'Universidad Machtia®',
-    children: [{ label: 'Primaria' }, { label: 'Secundaria' }, { label: 'Preparatoria' }, { label: 'Licenciaturas' }],
-  },
-  {
-    label: 'Eventos especiales',
+    label: 'Mi Red',
     children: [
-      { label: 'Cursos Presenciales' },
-      { label: 'Seminarios Online' },
-      { label: 'Diplomados' },
-      { label: 'Convenciones' },
+      { label: 'Mis Referidos', href: '/home/red-usuarios' },
+      { label: 'Mi Red 2x15', href: '/home/red-usuarios' },
     ],
   },
-  { label: 'SEP-Conocer' },
-  { label: 'Romi®' },
-  {
-    label: 'Servicios Digitales',
-    children: [
-      { label: 'Pago de Servicios' },
-      { label: 'Recargas telefónicas' },
-      { label: 'Seguros Médicos y de Vida' },
-      { label: 'Autofinanciamiento' },
-    ],
-  },
-  { label: 'Sorteos' },
-  { label: 'Fundación Machtia®' },
-  { label: 'Negocios y Alianzas' },
+  { label: 'Cursos', href: '/home/cursos' },
+  { label: 'Talleres', href: '/home/talleres' },
+  { label: 'Biblioteca Digital', href: '/home/proximamente/biblioteca-digital' },
+  { label: 'Universidad Machtia®', href: '/home/proximamente/universidad-machtia' },
+  { label: 'Eventos especiales', href: '/home/proximamente/eventos-especiales' },
+  { label: 'SEP-Conocer', href: '/home/proximamente/sep-conocer' },
+  { label: 'Romi®', href: '/home/proximamente/romi' },
+  { label: 'Servicios Digitales', href: '/home/proximamente/servicios-digitales' },
+  { label: 'Sorteos', href: '/home/proximamente/sorteos' },
+  { label: 'Fundación Machtia®', href: '/home/proximamente/fundacion-machtia' },
+  { label: 'Negocios y Alianzas', href: '/home/proximamente/negocios-alianzas' },
 ];
 
-function useCountdown(target: string) {
-  const [text, setText] = useState('calculando…');
-  useEffect(() => {
-    const targetDate = new Date(target).getTime();
-    function tick() {
-      const diff = targetDate - Date.now();
-      if (diff <= 0) return setText('¡Campaña activa!');
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff / 3600000) % 24);
-      const m = Math.floor((diff / 60000) % 60);
-      setText(`${d}d ${h}h ${m}m`);
-    }
-    tick();
-    const id = setInterval(tick, 60000);
-    return () => clearInterval(id);
-  }, [target]);
-  return text;
-}
+
 
 interface SessionUser {
   id: string;
@@ -121,7 +91,7 @@ export default function Dashboard() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
-  const countdown = useCountdown('2027-10-20T00:00:00');
+  const countdown = useCountdown('2026-10-30T22:00:00-06:00', '¡Campaña activa!');
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -184,7 +154,16 @@ export default function Dashboard() {
             Inicio
           </a>
 
-          {NAV_SECTIONS.map((section) => (
+          {NAV_SECTIONS.map((section) =>
+            section.href ? (
+              <Link
+                key={section.label}
+                href={section.href}
+                className="rounded-lg hover:bg-[#F4F6FB] text-[14px] font-medium px-3 py-2.5 block"
+              >
+                {section.label}
+              </Link>
+            ) : (
             <div key={section.label}>
               <button
                 onClick={() =>
@@ -226,7 +205,8 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          ))}
+            )
+          )}
 
           {role === 'administrador' && (
             <Link
