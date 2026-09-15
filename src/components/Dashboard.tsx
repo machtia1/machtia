@@ -259,8 +259,8 @@ export default function Dashboard() {
             <button className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
               <Menu size={20} />
             </button>
-            <a className="text-[14px] font-semibold text-cm-primary hidden sm:block">Mis Ganancias</a>
-            <a className="text-[14px] font-semibold hidden sm:block">Tienda</a>
+            <a className="text-[14px] font-semibold text-cm-primary hidden md:block">Mis Ganancias</a>
+            <a className="text-[14px] font-semibold hidden md:block">Tienda</a>
           </div>
 
           <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-cm-primary to-cm-accent text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-full">
@@ -300,6 +300,18 @@ export default function Dashboard() {
             </div>
           </div>
         </header>
+
+        <div className="flex md:hidden items-center gap-2 overflow-x-auto no-scrollbar px-4 py-2 bg-white border-b border-[#E4E7EE] sticky top-16 z-10">
+          <a className="shrink-0 text-[13px] font-semibold text-cm-primary bg-[#ECECFF] px-3.5 py-1.5 rounded-full whitespace-nowrap">
+            Mis Ganancias
+          </a>
+          <a className="shrink-0 text-[13px] font-semibold bg-[#F4F6FB] border border-[#E4E7EE] px-3.5 py-1.5 rounded-full whitespace-nowrap">
+            Tienda
+          </a>
+          <div className="shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-cm-primary to-cm-accent text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap">
+            🚀 Campaña — {countdown}
+          </div>
+        </div>
 
         <div className="p-6 sm:p-8">
           <h1 className="text-[22px] font-semibold mb-1">Hola, {user.nombre} 👋</h1>
