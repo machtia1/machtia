@@ -12,6 +12,10 @@ export async function GET() {
   }
 
   const usuarios = await prisma.user.findMany({
+    where: {
+      status: { not: 'RECHAZADA' },
+      fueraDeRed: false,
+    },
     orderBy: { creadoEn: 'desc' },
     select: {
       id: true,

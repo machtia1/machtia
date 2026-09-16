@@ -99,6 +99,12 @@ model User {
   regaliasOrigen      RegaliaRedAlterna[] @relation("RegaliasOrigen")
   regaliasGanadas     RegaliaRedAlterna[] @relation("RegaliasGanadas")
 
+  // true si un Administrador la eliminó definitivamente de la Red de
+  // Usuarios ("Eliminar definitivo + comprimir"). Conserva la cuenta
+  // y su historial, pero deja de contar como participante activo de
+  // la red — se usa para que ya no aparezca en la lista de Usuarios.
+  fueraDeRed Boolean @default(false)
+
   inactivoDesde DateTime?
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime  @updatedAt

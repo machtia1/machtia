@@ -333,7 +333,7 @@ export async function eliminarDefinitivoDb(usuarioId: string): Promise<void> {
     const huerfano = await comprimirPosicion(tx, usuarioId);
     await tx.user.update({
       where: { id: usuarioId },
-      data: { padreRedId: null, ladoEnPadre: null },
+      data: { padreRedId: null, ladoEnPadre: null, fueraDeRed: true },
     });
     return huerfano;
   });
