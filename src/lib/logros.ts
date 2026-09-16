@@ -14,7 +14,7 @@ export * from './logros-types';
 // Misma fecha de inicio de la Red Alterna que usa src/lib/redAlterna.ts
 // (se repite aquí como literal para no crear una dependencia circular;
 // si esa fecha cambia, actualizar también aquí).
-const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T12:00:00-06:00';
+const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00';
 
 /** Calcula, con datos reales de la base de datos, qué logros ya desbloqueó un usuario. */
 export async function calcularLogrosUsuario(usuarioId: string): Promise<LogrosUsuario> {

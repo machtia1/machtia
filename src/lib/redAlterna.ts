@@ -44,7 +44,7 @@ import { prisma } from './prisma';
 // ============================================================
 
 /** Fecha y hora de INICIO de la Red Alterna (zona horaria de México, UTC-6). */
-const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T12:00:00-06:00';
+const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00';
 
 /** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
 const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';

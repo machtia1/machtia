@@ -73,7 +73,7 @@ export default function CampanaLanzamiento() {
 
           {datos.estado === 'pendiente' && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-6">
-              La campaña arranca el 16 de septiembre a las 12:00 del mediodía (hora Centro de
+              La campaña arranca hoy 16 de septiembre a las 10:00 p.m. (hora Centro de
               México).
             </div>
           )}

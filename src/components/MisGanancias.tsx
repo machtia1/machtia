@@ -71,8 +71,8 @@ export default function MisGanancias() {
           )}
           {resumen.estado === 'pendiente' && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-5">
-              La Campaña de Lanzamiento todavía no arranca — empieza el 16 de septiembre a las
-              12:00 del mediodía (hora Centro de México). En cuanto inicie, aquí verás tus
+              La Campaña de Lanzamiento todavía no arranca — empieza hoy 16 de septiembre a las
+              10:00 p.m. (hora Centro de México). En cuanto inicie, aquí verás tus
               comisiones en tiempo real.
             </div>
           )}
