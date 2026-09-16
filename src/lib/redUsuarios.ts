@@ -40,6 +40,24 @@ export interface NodoRed {
   ladoEnPadre: 'IZQUIERDA' | 'DERECHA' | null;
 }
 
+/**
+ * Si `usuarioId` ocupa uno de los 8 niveles restringidos de la Red
+ * General, devuelve ese nivel (1-8). Si no, null. Se usa para saber
+ * en qué nivel RELATIVO de su propia vista 2x15 empieza a caer su
+ * primer invitado real (regla confirmada por el cliente, 16 sept
+ * 2026: los niveles 1-8 de la red completa son una sola zona
+ * restringida compartida por todos, así que el primer nivel libre
+ * de verdad para cualquiera es siempre el nivel 9 de la red
+ * completa — sin necesidad de reconectar a nadie ya registrado).
+ */
+async function obtenerNivelRestringido(usuarioId: string): Promise<number | null> {
+  const slot = await prisma.slotRestringido.findUnique({
+    where: { usuarioId },
+    select: { nivel: true },
+  });
+  return slot?.nivel ?? null;
+}
+
 const MAX_INTENTOS_INSERCION = 5;
 
 /**
@@ -125,10 +143,32 @@ export async function obtenerArbolPorNiveles(raizId: string, maxNiveles = 15) {
   });
   if (!raiz) return null;
 
+  // Si quien ve su red está en un espacio restringido (1-8), sus
+  // primeros niveles de esta vista todavía son parte de la zona
+  // restringida de la red completa (no son suyos para llenar). Se
+  // muestran como filas bloqueadas, del tamaño que le tocaría
+  // (2, 4, 8...), y su primer nivel real empieza después de eso.
+  const nivelRestringido = await obtenerNivelRestringido(raizId);
+  const offsetRestringido = nivelRestringido ? Math.max(0, 8 - nivelRestringido) : 0;
+
   const niveles: (NodoRed | null)[][] = [];
+
+  for (let n = 1; n <= offsetRestringido && n <= maxNiveles; n++) {
+    const totalEnNivel = 2 ** n;
+    const fila: NodoRed[] = Array.from({ length: totalEnNivel }, (_, idx) => ({
+      id: `restringido-${raizId}-${n}-${idx}`,
+      nombre: 'Restringido',
+      apellido: '',
+      status: 'RESTRINGIDO',
+      ladoEnPadre: idx % 2 === 0 ? 'IZQUIERDA' : 'DERECHA',
+    }));
+    niveles.push(fila);
+  }
+
+  const maxNivelesReales = Math.max(0, maxNiveles - offsetRestringido);
   let actualIds: string[] = [raizId];
 
-  for (let n = 1; n <= maxNiveles; n++) {
+  for (let n = 1; n <= maxNivelesReales; n++) {
     const hijos = await prisma.user.findMany({
       where: { padreRedId: { in: actualIds } },
       select: { id: true, nombre: true, apellido: true, status: true, ladoEnPadre: true, padreRedId: true },
@@ -152,7 +192,7 @@ export async function obtenerArbolPorNiveles(raizId: string, maxNiveles = 15) {
     if (actualIds.length === 0) break;
   }
 
-  return { raiz, niveles };
+  return { raiz, niveles, offsetRestringido };
 }
 
 export async function contarTotalDb(raizId: string): Promise<{ total: number; activos: number }> {

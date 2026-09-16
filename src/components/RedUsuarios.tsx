@@ -23,6 +23,7 @@ interface DatosRed {
   total: number;
   activos: number;
   esAdministrador: boolean;
+  offsetRestringido?: number;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -165,6 +166,11 @@ export default function RedUsuarios() {
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full border border-dashed border-[#B8BCC8] inline-block" /> Vacante
             </span>
+            {!!datos.offsetRestringido && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#6B7280] inline-block" /> Restringido
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-8 min-w-max pb-2">
@@ -180,7 +186,15 @@ export default function RedUsuarios() {
             {datos.niveles.map((fila, i) => (
               <div key={i} className="flex items-center gap-3">
                 {fila.map((nodo, j) =>
-                  nodo ? (
+                  nodo && nodo.status === 'RESTRINGIDO' ? (
+                    <div
+                      key={nodo.id}
+                      title="Espacio restringido de la Red General — administrado por el Admin"
+                      className="w-[70px] h-[30px] rounded-lg border-2 border-[#6B7280] bg-[#F0F1F4] flex items-center justify-center text-[13px]"
+                    >
+                      🔒
+                    </div>
+                  ) : nodo ? (
                     <button
                       key={nodo.id}
                       onClick={() => setSeleccionado(nodo)}
