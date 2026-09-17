@@ -1,16 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { Lock, Trophy } from 'lucide-react';
 import type { LogroConEstado } from '@/lib/logros-types';
 
-const COLOR_POR_CATEGORIA: Record<string, string> = {
-  academico: 'from-amber-400 to-amber-600',
-  red: 'from-cm-primary to-cm-accent',
-  ganancias: 'from-emerald-400 to-emerald-600',
-};
-
 export default function LogroBadge({ logro }: { logro: LogroConEstado }) {
-  const color = COLOR_POR_CATEGORIA[logro.categoria] ?? 'from-cm-primary to-cm-accent';
+  const [imagenFallo, setImagenFallo] = useState(false);
   const porcentaje = Math.min(100, Math.round((logro.progresoActual / logro.progresoMeta) * 100));
 
   return (
@@ -21,15 +16,30 @@ export default function LogroBadge({ logro }: { logro: LogroConEstado }) {
           : 'bg-[#F4F6FB] border-[#E4E7EE] opacity-70'
       }`}
     >
-      <div
-        className={`w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br ${
-          logro.desbloqueado ? color : 'from-gray-300 to-gray-400'
-        }`}
-      >
-        {logro.desbloqueado ? (
-          <Trophy size={26} className="text-white" />
+      <div className="relative w-16 h-16 shrink-0">
+        {!imagenFallo ? (
+          <img
+            src={`/logros/${logro.id}.jpg`}
+            alt={logro.nombre}
+            onError={() => setImagenFallo(true)}
+            className={`w-16 h-16 rounded-full object-cover border border-[#E4E7EE] ${
+              logro.desbloqueado ? '' : 'grayscale opacity-60'
+            }`}
+          />
         ) : (
-          <Lock size={22} className="text-white" />
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br ${
+              logro.desbloqueado ? 'from-cm-primary to-cm-accent' : 'from-gray-300 to-gray-400'
+            }`}
+          >
+            <Trophy size={26} className="text-white" />
+          </div>
+        )}
+
+        {!logro.desbloqueado && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25 rounded-full">
+            <Lock size={18} className="text-white drop-shadow" />
+          </div>
         )}
       </div>
 
