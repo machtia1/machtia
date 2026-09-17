@@ -142,6 +142,26 @@ model SlotRestringido {
   @@unique([nivel, posicion])
 }
 
+// ============================================================
+// Anuncios y avisos — panel "Anuncios y avisos" del Dashboard.
+// Editable por Administrador y Asistente Administrativo desde
+// Panel de Administrador → Anuncios.
+// ============================================================
+model Anuncio {
+  id       String  @id @default(cuid())
+  etiqueta String // ej. "Lanzamiento", "Cursos", "Plataforma"
+  texto    String
+
+  // Si está en false, deja de mostrarse en el Dashboard de los
+  // usuarios pero se conserva (no se borra) para poder reactivarlo.
+  activo Boolean @default(true)
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([activo, creadoEn])
+}
+
 // Preregistro (Fase 1): antes de que exista una cuenta real de User.
 model Preregistro {
   id                String   @id @default(cuid())

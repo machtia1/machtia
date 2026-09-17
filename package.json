@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.mjs",
-    "db:backfill-red-general": "node prisma/backfill-red-general.mjs"
+    "db:backfill-red-general": "node prisma/backfill-red-general.mjs",
+    "db:seed-anuncios": "node prisma/seed-anuncios.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",

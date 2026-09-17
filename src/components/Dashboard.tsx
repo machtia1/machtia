@@ -68,6 +68,24 @@ interface SessionUser {
   linkInvitacion: string;
 }
 
+interface AnuncioDashboard {
+  id: string;
+  etiqueta: string;
+  texto: string;
+  creadoEn: string;
+}
+
+/** "Hoy" / "Ayer" / "Hace N días" a partir de una fecha ISO. */
+function formatearFechaAnuncio(iso: string): string {
+  const fecha = new Date(iso);
+  const hoy = new Date();
+  const diffMs = hoy.setHours(0, 0, 0, 0) - new Date(fecha).setHours(0, 0, 0, 0);
+  const diffDias = Math.round(diffMs / 86400000);
+  if (diffDias <= 0) return 'Hoy';
+  if (diffDias === 1) return 'Ayer';
+  return `Hace ${diffDias} días`;
+}
+
 function mapRol(rol: SessionUser['rol']): Role {
   switch (rol) {
     case 'ADMINISTRADOR':
@@ -91,6 +109,7 @@ export default function Dashboard() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [anuncios, setAnuncios] = useState<AnuncioDashboard[] | null>(null);
   const countdown = useCountdown('2026-10-30T22:00:00-06:00', '¡Campaña activa!');
 
   useEffect(() => {
@@ -105,6 +124,13 @@ export default function Dashboard() {
       })
       .finally(() => setLoadingUser(false));
   }, [router]);
+
+  useEffect(() => {
+    fetch('/api/anuncios')
+      .then((res) => res.json())
+      .then((data) => setAnuncios(data.anuncios ?? []))
+      .catch(() => setAnuncios([]));
+  }, []);
 
   async function handleLogout(e: React.MouseEvent) {
     e.preventDefault();
@@ -232,6 +258,14 @@ export default function Dashboard() {
               Usuarios
             </Link>
           )}
+          {role === 'administrador' && (
+            <Link
+              href="/home/anuncios"
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 block"
+            >
+              Anuncios
+            </Link>
+          )}
           {(role === 'profesor' || role === 'socio') && (
             <a className="rounded-lg hover:bg-[#F4F6FB] text-[14px] font-medium px-3 py-2.5">
               Crear contenido
@@ -338,17 +372,19 @@ export default function Dashboard() {
           <div className="grid lg:grid-cols-[2fr_1fr] gap-5">
             <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5">
               <h2 className="text-[15px] font-semibold mb-3">Anuncios y avisos</h2>
-              {[
-                ['Lanzamiento', 'La cuenta regresiva para la Campaña de Lanzamiento ya está activa.', 'Hoy'],
-                ['Cursos', 'El curso de Inglés A1 estará disponible próximamente.', 'Ayer'],
-                ['Plataforma', 'Ya puedes enlazar tus redes sociales desde tu perfil.', 'Hace 3 días'],
-              ].map(([tag, txt, date]) => (
-                <div key={txt} className="py-3 border-b border-[#E4E7EE] last:border-0">
+              {anuncios === null && (
+                <p className="text-[13px] text-[#6B7280] py-2">Cargando anuncios...</p>
+              )}
+              {anuncios !== null && anuncios.length === 0 && (
+                <p className="text-[13px] text-[#6B7280] py-2">No hay anuncios por ahora.</p>
+              )}
+              {(anuncios ?? []).map((a) => (
+                <div key={a.id} className="py-3 border-b border-[#E4E7EE] last:border-0">
                   <span className="inline-block text-[11px] font-bold text-cm-primary bg-[#ECECFF] px-2 py-0.5 rounded-full mb-1.5">
-                    {tag}
+                    {a.etiqueta}
                   </span>
-                  <div className="text-[13px]">{txt}</div>
-                  <div className="text-[11px] text-[#6B7280] mt-1">{date}</div>
+                  <div className="text-[13px]">{a.texto}</div>
+                  <div className="text-[11px] text-[#6B7280] mt-1">{formatearFechaAnuncio(a.creadoEn)}</div>
                 </div>
               ))}
             </div>
