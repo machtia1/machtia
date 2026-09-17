@@ -20,36 +20,47 @@ export async function POST(request: Request) {
   if (!slot || slot.status !== 'INVITADO') {
     return NextResponse.json({ error: 'Este espacio no tiene una invitación pendiente' }, { status: 409 });
   }
+  if (!slot.usuarioId) {
+    return NextResponse.json(
+      { error: 'Este espacio todavía no está inicializado. Corre el backfill de Red General.' },
+      { status: 409 }
+    );
+  }
 
-  const yaExiste = await prisma.user.findUnique({ where: { correo: correo.trim().toLowerCase() } });
+  const correoNormalizado = correo.trim().toLowerCase();
+  const yaExiste = await prisma.user.findFirst({
+    where: { correo: correoNormalizado, NOT: { id: slot.usuarioId } },
+  });
   if (yaExiste) {
     return NextResponse.json({ error: 'Ya existe una cuenta con este correo' }, { status: 409 });
   }
 
-  // Esta persona ocupa uno de los primeros 8 niveles: es "raíz" de su
-  // propia red (sin padreRedId), fuera de la restricción, tal como
-  // describe la regla del cliente. No se le asigna contraseña aquí —
-  // queda pendiente un flujo de "crear tu contraseña" para que pueda
-  // iniciar sesión (ver NOTAS_RED_USUARIOS.md).
+  // Esta persona reclama la fila "reservada" que ya está conectada en
+  // su posición exacta dentro del árbol de la Red General (ver
+  // prisma/backfill-red-general.mjs) — se ACTUALIZA esa misma fila,
+  // nunca se crea una nueva. No se le asigna contraseña aquí — queda
+  // pendiente un flujo de "crear tu contraseña" (ver NOTAS_RED_USUARIOS.md).
   const expiraEnRestringido = new Date();
   expiraEnRestringido.setDate(expiraEnRestringido.getDate() + 365); // 365 días, misma regla que el resto de las membresías
 
-  const nuevoUsuario = await prisma.user.create({
+  const nuevoUsuario = await prisma.user.update({
+    where: { id: slot.usuarioId },
     data: {
       nombre: nombre.trim(),
       apellido: apellido.trim(),
-      correo: correo.trim().toLowerCase(),
+      correo: correoNormalizado,
       telefono: telefono?.trim() || null,
       pais: pais?.trim() || null,
       status: 'ACTIVA',
       correoConfirmado: true,
       membresiaExpiraEn: expiraEnRestringido,
+      reservado: false,
     },
   });
 
   await prisma.slotRestringido.update({
     where: { id: slotId },
-    data: { status: 'OCUPADO', inviteLink: null, usuarioId: nuevoUsuario.id },
+    data: { status: 'OCUPADO', inviteLink: null },
   });
 
   return NextResponse.json({ ok: true, usuario: nuevoUsuario });

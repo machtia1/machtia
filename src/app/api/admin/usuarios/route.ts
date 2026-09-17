@@ -15,6 +15,9 @@ export async function GET() {
     where: {
       status: { not: 'RECHAZADA' },
       fueraDeRed: false,
+      // Excluye los espacios reservados de la Red General que
+      // todavía nadie ha reclamado — no son personas reales.
+      reservado: false,
     },
     orderBy: { creadoEn: 'desc' },
     select: {

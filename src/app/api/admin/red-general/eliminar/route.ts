@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { randomUUID } from 'crypto';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -21,18 +22,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este espacio no está ocupado' }, { status: 409 });
   }
 
-  // No se borra la cuenta (podría tener su propia red hacia abajo,
-  // eso se conserva intacto) — solo se desvincula del espacio y se
-  // deja el espacio libre de nuevo.
-  await prisma.$transaction([
-    prisma.slotRestringido.update({
+  // La fila de este usuario NO se borra ni se desconecta del árbol —
+  // su posición (padreRedId/ladoEnPadre) es fija y la necesitan los
+  // espacios de abajo para seguir conectados. Solo se "resetea" esa
+  // misma fila de vuelta a un espacio reservado sin reclamar, con un
+  // correo interno nuevo para poder liberar el correo real que tenía.
+  if (slot.usuarioId) {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: slot.usuarioId },
+        data: {
+          nombre: 'Espacio',
+          apellido: `Reservado (Nivel ${slot.nivel})`,
+          correo: `reservado-${randomUUID()}@interno.clubmachtia`,
+          correoConfirmado: false,
+          telefono: null,
+          pais: null,
+          suscripcion: null,
+          rol: 'USUARIO',
+          status: 'PENDIENTE_CONFIRMACION',
+          passwordHash: null,
+          comprobantePagoUrl: null,
+          membresiaExpiraEn: null,
+          reservado: true,
+        },
+      }),
+      prisma.slotRestringido.update({
+        where: { id: slotId },
+        data: { status: 'VACIO', inviteLink: null },
+      }),
+    ]);
+  } else {
+    await prisma.slotRestringido.update({
       where: { id: slotId },
-      data: { status: 'VACIO', inviteLink: null, usuarioId: null },
-    }),
-    ...(slot.usuarioId
-      ? [prisma.user.update({ where: { id: slot.usuarioId }, data: { status: 'RECHAZADA' } })]
-      : []),
-  ]);
+      data: { status: 'VACIO', inviteLink: null },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

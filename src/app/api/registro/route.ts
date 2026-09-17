@@ -86,6 +86,11 @@ export async function POST(request: Request) {
     let invitadorId: string | null = null;
     let rolFinal: string | undefined;
     let suscripcionFinal: string;
+    // Si es un espacio restringido, esta es la fila "reservada" que ya
+    // está conectada en el árbol (ver prisma/backfill-red-general.mjs)
+    // y que hay que ACTUALIZAR con los datos reales — nunca crear una
+    // fila nueva, para no perder su posición en la Red General.
+    let slotParaReclamar: { id: string; usuarioId: string | null } | null = null;
 
     if (esRestringido) {
       if (!OPCIONES_RESTRINGIDO.includes(suscripcion as (typeof OPCIONES_RESTRINGIDO)[number])) {
@@ -94,8 +99,21 @@ export async function POST(request: Request) {
       const opcion = suscripcion as (typeof OPCIONES_RESTRINGIDO)[number];
       rolFinal = ROL_POR_OPCION_RESTRINGIDA[opcion];
       suscripcionFinal = SUSCRIPCION_POR_OPCION_RESTRINGIDA[opcion];
-      // Las personas de espacios restringidos son raíz de su propia red,
-      // fuera del árbol de referidos normal — sin invitadoPorId.
+      // Las personas de espacios restringidos son raíz de su propia red
+      // de referidos normal (sin invitadoPorId) — pero SÍ tienen ya una
+      // posición fija en el árbol de la Red General, asignada por el
+      // backfill, que se reclama abajo.
+
+      slotParaReclamar = await prisma.slotRestringido.findUnique({
+        where: { id: preregistro.slotRestringidoId! },
+        select: { id: true, usuarioId: true },
+      });
+      if (!slotParaReclamar?.usuarioId) {
+        return NextResponse.json(
+          { error: 'Este espacio todavía no está inicializado. Contacta al administrador.' },
+          { status: 409 }
+        );
+      }
     } else {
       if (!SUSCRIPCIONES_VALIDAS.includes(suscripcion as any)) {
         return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
@@ -125,35 +143,43 @@ export async function POST(request: Request) {
     const bcrypt = await import('bcryptjs');
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const nuevoUsuario = await prisma.user.create({
-      data: {
-        nombre: preregistro.nombre,
-        apellido,
-        correo: preregistro.correo,
-        passwordHash,
-        pais,
-        ladaPais,
-        telefono,
-        estadoProvincia,
-        ciudad,
-        suscripcion: suscripcionFinal as (typeof SUSCRIPCIONES_VALIDAS)[number],
-        ...(rolFinal ? { rol: rolFinal as any } : {}),
-        comprobantePagoUrl: blob.url,
-        correoConfirmado: true,
-        status: 'PENDIENTE_APROBACION', // Un Administrador debe aprobar el comprobante.
-        invitadoPorId: invitadorId,
-      },
-    });
+    const datosPersona = {
+      nombre: preregistro.nombre,
+      apellido,
+      correo: preregistro.correo,
+      passwordHash,
+      pais,
+      ladaPais,
+      telefono,
+      estadoProvincia,
+      ciudad,
+      suscripcion: suscripcionFinal as (typeof SUSCRIPCIONES_VALIDAS)[number],
+      ...(rolFinal ? { rol: rolFinal as any } : {}),
+      comprobantePagoUrl: blob.url,
+      correoConfirmado: true,
+      status: 'PENDIENTE_APROBACION' as const, // Un Administrador debe aprobar el comprobante.
+    };
+
+    const nuevoUsuario = slotParaReclamar
+      ? // Reclama la fila reservada que ya está conectada al árbol de
+        // la Red General — no se toca su padreRedId/ladoEnPadre.
+        await prisma.user.update({
+          where: { id: slotParaReclamar.usuarioId! },
+          data: { ...datosPersona, reservado: false },
+        })
+      : await prisma.user.create({
+          data: { ...datosPersona, invitadoPorId: invitadorId },
+        });
 
     await prisma.preregistro.update({
       where: { id: preregistro.id },
       data: { confirmado: true },
     });
 
-    if (esRestringido && preregistro.slotRestringidoId) {
+    if (slotParaReclamar) {
       await prisma.slotRestringido.update({
-        where: { id: preregistro.slotRestringidoId },
-        data: { status: 'OCUPADO', inviteLink: null, usuarioId: nuevoUsuario.id },
+        where: { id: slotParaReclamar.id },
+        data: { status: 'OCUPADO', inviteLink: null },
       });
     }
 

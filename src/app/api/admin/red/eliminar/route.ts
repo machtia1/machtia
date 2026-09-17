@@ -16,6 +16,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Falta el usuarioId' }, { status: 400 });
   }
 
-  await eliminarDefinitivoDb(usuarioId);
+  const resultado = await eliminarDefinitivoDb(usuarioId);
+  if (!resultado.ok) {
+    return NextResponse.json({ error: resultado.motivo }, { status: 409 });
+  }
   return NextResponse.json({ ok: true });
 }

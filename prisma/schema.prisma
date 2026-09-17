@@ -105,6 +105,15 @@ model User {
   // la red — se usa para que ya no aparezca en la lista de Usuarios.
   fueraDeRed Boolean @default(false)
 
+  // true = esta fila es un espacio "reservado" de la Red General
+  // (niveles 1-8) que todavía nadie reclamó — existe únicamente para
+  // que la posición ya esté conectada al árbol desde el día uno (idea
+  // confirmada por el cliente el 16 sept 2026). Cuando alguien se
+  // registra en ese espacio, esta MISMA fila se actualiza con sus
+  // datos reales y reservado pasa a false — nunca se crea una fila
+  // nueva ni se mueve de posición. Ver prisma/backfill-red-general.mjs.
+  reservado Boolean @default(false)
+
   inactivoDesde DateTime?
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime  @updatedAt

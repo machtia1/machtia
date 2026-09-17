@@ -38,24 +38,10 @@ export interface NodoRed {
   apellido: string;
   status: string;
   ladoEnPadre: 'IZQUIERDA' | 'DERECHA' | null;
-}
-
-/**
- * Si `usuarioId` ocupa uno de los 8 niveles restringidos de la Red
- * General, devuelve ese nivel (1-8). Si no, null. Se usa para saber
- * en qué nivel RELATIVO de su propia vista 2x15 empieza a caer su
- * primer invitado real (regla confirmada por el cliente, 16 sept
- * 2026: los niveles 1-8 de la red completa son una sola zona
- * restringida compartida por todos, así que el primer nivel libre
- * de verdad para cualquiera es siempre el nivel 9 de la red
- * completa — sin necesidad de reconectar a nadie ya registrado).
- */
-async function obtenerNivelRestringido(usuarioId: string): Promise<number | null> {
-  const slot = await prisma.slotRestringido.findUnique({
-    where: { usuarioId },
-    select: { nivel: true },
-  });
-  return slot?.nivel ?? null;
+  // true = espacio reservado de la Red General (niveles 1-8) que
+  // todavía nadie ha reclamado. Ver el campo `reservado` en
+  // schema.prisma y prisma/backfill-red-general.mjs.
+  reservado: boolean;
 }
 
 const MAX_INTENTOS_INSERCION = 5;
@@ -124,8 +110,15 @@ async function buscarEspacioLibre(
   return null;
 }
 
+/** true si `usuarioId` es un espacio reservado sin reclamar (no una persona real). */
+async function esReservado(usuarioId: string): Promise<boolean> {
+  const u = await prisma.user.findUnique({ where: { id: usuarioId }, select: { reservado: true } });
+  return u?.reservado ?? false;
+}
+
 /** Marca una cuenta como inactiva (no renovó). Conserva su posición en el árbol. */
 export async function marcarInactivoDb(usuarioId: string): Promise<void> {
+  if (await esReservado(usuarioId)) return;
   await prisma.user.update({
     where: { id: usuarioId },
     data: { status: 'INACTIVA', inactivoDesde: new Date() },
@@ -143,35 +136,27 @@ export async function obtenerArbolPorNiveles(raizId: string, maxNiveles = 15) {
   });
   if (!raiz) return null;
 
-  // Si quien ve su red está en un espacio restringido (1-8), sus
-  // primeros niveles de esta vista todavía son parte de la zona
-  // restringida de la red completa (no son suyos para llenar). Se
-  // muestran como filas bloqueadas, del tamaño que le tocaría
-  // (2, 4, 8...), y su primer nivel real empieza después de eso.
-  const nivelRestringido = await obtenerNivelRestringido(raizId);
-  const offsetRestringido = nivelRestringido ? Math.max(0, 8 - nivelRestringido) : 0;
-
+  // Desde el 17 sept 2026, los 8 niveles restringidos de la Red
+  // General ya son filas reales conectadas en la base de datos (ver
+  // prisma/backfill-red-general.mjs) — un espacio sin reclamar
+  // todavía trae reservado=true. Ya no hace falta simular nada aquí:
+  // esta misma consulta trae, sin distinción, tanto los espacios
+  // reservados como las personas reales, en su posición exacta.
   const niveles: (NodoRed | null)[][] = [];
-
-  for (let n = 1; n <= offsetRestringido && n <= maxNiveles; n++) {
-    const totalEnNivel = 2 ** n;
-    const fila: NodoRed[] = Array.from({ length: totalEnNivel }, (_, idx) => ({
-      id: `restringido-${raizId}-${n}-${idx}`,
-      nombre: 'Restringido',
-      apellido: '',
-      status: 'RESTRINGIDO',
-      ladoEnPadre: idx % 2 === 0 ? 'IZQUIERDA' : 'DERECHA',
-    }));
-    niveles.push(fila);
-  }
-
-  const maxNivelesReales = Math.max(0, maxNiveles - offsetRestringido);
   let actualIds: string[] = [raizId];
 
-  for (let n = 1; n <= maxNivelesReales; n++) {
+  for (let n = 1; n <= maxNiveles; n++) {
     const hijos = await prisma.user.findMany({
       where: { padreRedId: { in: actualIds } },
-      select: { id: true, nombre: true, apellido: true, status: true, ladoEnPadre: true, padreRedId: true },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        status: true,
+        ladoEnPadre: true,
+        padreRedId: true,
+        reservado: true,
+      },
     });
 
     // Reconstruye la fila en el orden correcto (izq/der por cada padre, en el orden de actualIds).
@@ -192,7 +177,7 @@ export async function obtenerArbolPorNiveles(raizId: string, maxNiveles = 15) {
     if (actualIds.length === 0) break;
   }
 
-  return { raiz, niveles, offsetRestringido };
+  return { raiz, niveles };
 }
 
 export async function contarTotalDb(raizId: string): Promise<{ total: number; activos: number }> {
@@ -202,15 +187,18 @@ export async function contarTotalDb(raizId: string): Promise<{ total: number; ac
   const raiz = await prisma.user.findUnique({ where: { id: raizId }, select: { status: true } });
   if (raiz?.status === 'ACTIVA') activos++;
 
+  // Recorre TODA la red (incluye reservados) para poder seguir
+  // bajando por el árbol, pero solo cuenta a las personas reales.
   let actualIds = [raizId];
   while (actualIds.length > 0) {
     const hijos = await prisma.user.findMany({
       where: { padreRedId: { in: actualIds } },
-      select: { id: true, status: true },
+      select: { id: true, status: true, reservado: true },
     });
     if (hijos.length === 0) break;
-    total += hijos.length;
-    activos += hijos.filter((h) => h.status === 'ACTIVA').length;
+    const reales = hijos.filter((h) => !h.reservado);
+    total += reales.length;
+    activos += reales.filter((h) => h.status === 'ACTIVA').length;
     actualIds = hijos.map((h) => h.id);
   }
 
@@ -328,7 +316,21 @@ async function reinsertarHuerfanoSiHay(huerfanoId: string | null): Promise<void>
  * posición que deja (regla de la rama izquierda) y NO lo reinserta
  * en ningún lado.
  */
-export async function eliminarDefinitivoDb(usuarioId: string): Promise<void> {
+export async function eliminarDefinitivoDb(usuarioId: string): Promise<{ ok: boolean; motivo?: string }> {
+  // Las posiciones de la Red General (niveles 1-8) son fijas por
+  // diseño — comprimirlas rompería la conexión matemática entre
+  // SlotRestringido.nivel/posicion y el árbol real. Esa zona se
+  // administra solo desde el Panel de Administrador → Red General
+  // ("Liberar este espacio"), nunca desde aquí.
+  const slot = await prisma.slotRestringido.findUnique({ where: { usuarioId }, select: { id: true } });
+  if (slot) {
+    return {
+      ok: false,
+      motivo:
+        'Esta posición pertenece a la Red General (niveles 1-8). Libérala desde el Panel de Administrador → Red General.',
+    };
+  }
+
   const huerfanoId = await prisma.$transaction(async (tx) => {
     const huerfano = await comprimirPosicion(tx, usuarioId);
     await tx.user.update({
@@ -339,6 +341,7 @@ export async function eliminarDefinitivoDb(usuarioId: string): Promise<void> {
   });
 
   await reinsertarHuerfanoSiHay(huerfanoId);
+  return { ok: true };
 }
 
 /**

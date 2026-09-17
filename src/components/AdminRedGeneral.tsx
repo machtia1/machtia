@@ -125,7 +125,9 @@ export default function AdminRedGeneral() {
     await accion('/api/admin/red-general/resetear', { slotId: slot.id });
   }
   async function handleEliminar(slot: Slot) {
-    const ok = window.confirm('¿Liberar este espacio? La cuenta actual quedará desvinculada.');
+    const ok = window.confirm(
+      '¿Liberar este espacio? Sus datos actuales se borran y el espacio vuelve a quedar disponible para generar una nueva invitación — su posición en el árbol de la Red General se conserva.'
+    );
     if (!ok) return;
     await accion('/api/admin/red-general/eliminar', { slotId: slot.id });
     setSlotSeleccionadoId(null);
