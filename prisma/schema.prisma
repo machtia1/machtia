@@ -93,6 +93,17 @@ model User {
   hijosRed    User[]   @relation("ArbolRed")
   ladoEnPadre Lado?
 
+  // Posición dentro del árbol de la Red Alterna (Campaña de Lanzamiento):
+  // mismo mecanismo que padreRedId/hijosRed/ladoEnPadre, pero con 8
+  // posiciones por nivel en vez de 2 (confirmado por el cliente el
+  // 18 sept 2026 — ver comentario al inicio de src/lib/redAlterna.ts).
+  // Cada usuario se inserta por BFS dentro del árbol de quien lo
+  // invitó (invitadoPorId), igual que en la Red de Usuarios.
+  padreAlternaId         String?
+  padreAlterna           User?   @relation("ArbolAlterna", fields: [padreAlternaId], references: [id])
+  hijosAlterna           User[]  @relation("ArbolAlterna")
+  posicionEnPadreAlterna Int? // 1 a 8
+
   slotRestringido SlotRestringido?
 
   // Red Alterna — regalías que este usuario generó y las que ganó
@@ -120,7 +131,9 @@ model User {
 
   @@index([invitadoPorId])
   @@index([padreRedId])
+  @@index([padreAlternaId])
   @@unique([padreRedId, ladoEnPadre])
+  @@unique([padreAlternaId, posicionEnPadreAlterna])
 }
 
 // Los primeros 8 niveles de la Red General: existen como espacios fijos

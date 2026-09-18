@@ -4,23 +4,36 @@ import { prisma } from './prisma';
 // ============================================================
 // Red Alterna — Campaña de Lanzamiento
 // ------------------------------------------------------------
-// Reglas de negocio confirmadas con el cliente (13 sept 2026):
+// ⚠️ ACTUALIZACIÓN 18 sept 2026 — el cliente corrigió la regla que
+// se había confirmado el 13 sept: la Red Alterna SÍ es un árbol real
+// de posiciones, exactamente con el mismo mecanismo que la Red
+// General / Red de Usuarios, cambiando la constante de 2 ramas por
+// 8 ramas por nivel, a 5 niveles de profundidad de comisión (el
+// árbol en sí puede seguir creciendo más abajo, pero solo se paga
+// hasta 5 niveles hacia arriba).
 //
-// 1. Las dos redes (General y Alterna) se llenan desde el mismo
-//    momento, siguiendo la MISMA cadena real de invitaciones
-//    (User.invitadoPorId) — NO es un árbol de 8 ramas forzado,
-//    el cliente aclaró "participan todos sin ninguna restricción".
-//    La tabla de 8→64→512→4,096→32,768 es solo el ejemplo
-//    ilustrativo de ganancia máxima teórica, no una regla del
-//    sistema.
+// Mecanismo de inserción (ver `insertarEnRedAlterna` más abajo,
+// copia exacta del patrón de `insertarEnRedUsuarios` en
+// src/lib/redUsuarios.ts, con 8 posiciones por nodo en vez de 2):
+// cada usuario se inserta por BFS (izquierda a derecha, nivel por
+// nivel) dentro del árbol de quien lo invitó realmente
+// (`invitadoPorId`) — si alguien invita a más de 8 personas
+// directas, la 9ª en adelante se acomoda automáticamente en el
+// primer espacio libre más abajo dentro de su propia rama (el mismo
+// "desborde" que ya existe en la Red de Usuarios). Esta parte del
+// desborde fue una decisión razonable tomada por el desarrollador —
+// no una confirmación textual del cliente — porque no hay otro
+// mecanismo de acomodo definido; si el cliente pide algo distinto,
+// hay que ajustar solo `insertarEnRedAlterna`.
 //
-// 2. Cada persona gana regalías de hasta 5 niveles hacia arriba
-//    en su cadena de invitación, mientras la campaña esté activa.
+// 1. Cada persona gana regalías de hasta 5 niveles hacia arriba en
+//    SU POSICIÓN dentro de este árbol (padreAlternaId), no en la
+//    cadena real de invitación — mientras la campaña esté activa.
 //
-// 3. La tabla que se aplica es la del NIVEL MÁS BAJO entre quien
-//    gana y quien se suscribió — nadie gana más de lo que su
-//    propio nivel de suscripción permite, aunque el invitado haya
-//    pagado una suscripción más cara:
+// 2. La tabla que se aplica es la del NIVEL MÁS BAJO entre quien
+//    gana y quien se suscribió — nadie gana más de lo que su propio
+//    nivel de suscripción permite, aunque el invitado haya pagado
+//    una suscripción más cara:
 //
 //      Ganador    Invitado    Tabla aplicada
 //      ─────────────────────────────────────
@@ -32,15 +45,17 @@ import { prisma } from './prisma';
 //      Negocios   Plus        Plus
 //      Negocios   Negocios    Negocios
 //
-// 4. La Red General NO contabiliza ganancias mientras la Red
+// 3. La Red General NO contabiliza ganancias mientras la Red
 //    Alterna esté activa. Vuelve a contar a partir del corte.
 //
-// 5. Fechas de la campaña — actualizadas el 15 sept 2026: el cliente
-//    movió el inicio (que ya había pasado del lunes 14 al martes 15,
-//    6pm) al miércoles 16 de septiembre 2026, 12:00 PM (mediodía)
-//    hora Centro de México (UTC-6), para terminar de acomodar el
-//    arranque. Corte: 30 de octubre 2026, 10:00 PM misma zona (sin
-//    cambios).
+// 4. Fechas de la campaña — actualizadas el 15 sept 2026: inicio
+//    miércoles 16 de septiembre 2026, 12:00 PM (mediodía, luego
+//    movido a las 10:00 PM el mismo día) hora Centro de México
+//    (UTC-6). Corte: 30 de octubre 2026, 10:00 PM misma zona.
+//
+// Ver prisma/backfill-red-alterna.mjs para la reubicación de los
+// usuarios ya aprobados antes del 18 sept al nuevo árbol, y la
+// regeneración de sus regalías con la nueva lógica.
 // ============================================================
 
 /** Fecha y hora de INICIO de la Red Alterna (zona horaria de México, UTC-6). */
@@ -48,6 +63,9 @@ const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16
 
 /** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
 const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
+
+/** Cuántas posiciones (ramas) tiene cada nodo del árbol de la Red Alterna. */
+const RAMAS_POR_NODO = 8;
 
 /** Solo estas 3 tablas de comisión existen de verdad. */
 type SuscripcionElegible = 'BASICA' | 'PLUS' | 'NEGOCIOS';
@@ -101,15 +119,93 @@ export function redAlternaActiva(fecha: Date = new Date()): boolean {
   return fecha.getTime() >= inicio && fecha.getTime() < fin;
 }
 
+// ============================================================
+// Árbol de la Red Alterna (8 ramas por nodo) — mismo patrón que
+// insertarEnRedUsuarios/buscarEspacioLibre en src/lib/redUsuarios.ts,
+// cambiando "IZQUIERDA/DERECHA" (2 lados) por una posición 1..8.
+// ============================================================
+
+const MAX_INTENTOS_INSERCION = 5;
+
+/**
+ * Inserta `nuevoUsuarioId` dentro del árbol de la Red Alterna de
+ * `raizId` (quien lo invitó), siguiendo la regla de llenado BFS
+ * (posición 1 a 8, nivel por nivel). Segura ante inserciones
+ * concurrentes gracias a la restricción única de la base de datos.
+ */
+export async function insertarEnRedAlterna(
+  raizId: string,
+  nuevoUsuarioId: string,
+  maxNiveles = 30
+): Promise<{ ok: boolean; motivo?: string }> {
+  for (let intento = 0; intento < MAX_INTENTOS_INSERCION; intento++) {
+    const destino = await buscarEspacioLibreAlterna(raizId, maxNiveles);
+    if (!destino) {
+      return { ok: false, motivo: 'El árbol de la Red Alterna alcanzó el máximo de niveles.' };
+    }
+
+    try {
+      await prisma.user.update({
+        where: { id: nuevoUsuarioId },
+        data: { padreAlternaId: destino.padreId, posicionEnPadreAlterna: destino.posicion },
+      });
+      return { ok: true };
+    } catch (error: any) {
+      // P2002 = choque de restricción única: alguien más ocupó ese
+      // espacio en el instante entre que lo buscamos y lo asignamos.
+      if (error?.code === 'P2002' && intento < MAX_INTENTOS_INSERCION - 1) {
+        continue;
+      }
+      throw error;
+    }
+  }
+  return { ok: false, motivo: 'No se pudo insertar en la Red Alterna tras varios intentos, intenta de nuevo.' };
+}
+
+async function buscarEspacioLibreAlterna(
+  raizId: string,
+  maxNiveles: number
+): Promise<{ padreId: string; posicion: number } | null> {
+  let cola: { id: string; nivel: number }[] = [{ id: raizId, nivel: 0 }];
+
+  while (cola.length > 0) {
+    const { id, nivel } = cola.shift()!;
+    if (nivel >= maxNiveles) continue;
+
+    const hijos = await prisma.user.findMany({
+      where: { padreAlternaId: id },
+      select: { id: true, posicionEnPadreAlterna: true },
+    });
+    const ocupadas = new Set(hijos.map((h) => h.posicionEnPadreAlterna));
+
+    for (let posicion = 1; posicion <= RAMAS_POR_NODO; posicion++) {
+      if (!ocupadas.has(posicion)) {
+        return { padreId: id, posicion };
+      }
+    }
+
+    // Las 8 posiciones ya están ocupadas: sigue buscando en la
+    // siguiente generación, en el mismo orden (posición 1 a 8).
+    const hijosOrdenados = hijos
+      .slice()
+      .sort((a, b) => (a.posicionEnPadreAlterna ?? 0) - (b.posicionEnPadreAlterna ?? 0));
+    for (const hijo of hijosOrdenados) {
+      cola.push({ id: hijo.id, nivel: nivel + 1 });
+    }
+  }
+
+  return null;
+}
+
 /**
  * Calcula y GUARDA las regalías de la Red Alterna generadas por la
  * activación de una suscripción de pago. Camina hasta 5 niveles
- * hacia arriba en la cadena real de invitaciones.
+ * hacia arriba en el ÁRBOL de la Red Alterna (padreAlternaId) — ya
+ * NO en la cadena real de invitación.
  *
  * Se debe llamar exactamente una vez, en el momento en que se
- * aprueba el comprobante de pago de `nuevoUsuarioId` (ese punto
- * todavía no existe en el proyecto — es el pendiente "Panel para
- * aprobar comprobantes de pago y activar cuentas").
+ * aprueba el comprobante de pago (después de insertar a la persona
+ * en el árbol con `insertarEnRedAlterna`, ver /api/admin/aprobar).
  *
  * Es seguro llamarla más de una vez por error de red: no vuelve a
  * pagar si ya existen regalías registradas con este origenId.
@@ -128,7 +224,7 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
 
   const nuevoUsuario = await prisma.user.findUnique({
     where: { id: nuevoUsuarioId },
-    select: { id: true, suscripcion: true, invitadoPorId: true },
+    select: { id: true, suscripcion: true, padreAlternaId: true },
   });
 
   if (!nuevoUsuario || !esElegible(nuevoUsuario.suscripcion)) {
@@ -137,13 +233,13 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
 
   const susOrigen = tablaEfectiva(nuevoUsuario.suscripcion);
 
-  let ancestroId = nuevoUsuario.invitadoPorId;
+  let ancestroId = nuevoUsuario.padreAlternaId;
   let nivel = 1;
 
   while (ancestroId && nivel <= 5) {
     const ancestro = await prisma.user.findUnique({
       where: { id: ancestroId },
-      select: { id: true, suscripcion: true, invitadoPorId: true },
+      select: { id: true, suscripcion: true, padreAlternaId: true },
     });
 
     if (!ancestro) break;
@@ -165,7 +261,7 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
       });
     }
 
-    ancestroId = ancestro.invitadoPorId;
+    ancestroId = ancestro.padreAlternaId;
     nivel += 1;
   }
 }
@@ -195,8 +291,9 @@ export const TABLA_COMISIONES = TABLAS;
 
 /**
  * Cuenta cuánta gente real tiene un usuario en cada uno de los 5
- * niveles de su cadena de invitación (hacia abajo, no hacia arriba),
- * para dibujar el árbol de la pantalla de Campaña de Lanzamiento.
+ * niveles de SU ÁRBOL de la Red Alterna (hacia abajo, por posición
+ * — no por cadena de invitación), para dibujar el árbol de la
+ * pantalla de Campaña de Lanzamiento.
  */
 export async function arbolRedAlterna(usuarioId: string) {
   const niveles: { nivel: number; personas: number }[] = [];
@@ -204,7 +301,7 @@ export async function arbolRedAlterna(usuarioId: string) {
 
   for (let nivel = 1; nivel <= 5; nivel++) {
     const hijos = await prisma.user.findMany({
-      where: { invitadoPorId: { in: idsNivelActual } },
+      where: { padreAlternaId: { in: idsNivelActual } },
       select: { id: true },
     });
     niveles.push({ nivel, personas: hijos.length });
@@ -212,7 +309,7 @@ export async function arbolRedAlterna(usuarioId: string) {
     if (idsNivelActual.length === 0) break;
   }
 
-  // Rellena los niveles restantes en 0 si la cadena se acabó antes de nivel 5.
+  // Rellena los niveles restantes en 0 si el árbol se acabó antes de nivel 5.
   while (niveles.length < 5) {
     niveles.push({ nivel: niveles.length + 1, personas: 0 });
   }

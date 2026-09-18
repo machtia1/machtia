@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.mjs",
     "db:backfill-red-general": "node prisma/backfill-red-general.mjs",
-    "db:seed-anuncios": "node prisma/seed-anuncios.mjs"
+    "db:seed-anuncios": "node prisma/seed-anuncios.mjs",
+    "db:backfill-red-alterna": "node prisma/backfill-red-alterna.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",

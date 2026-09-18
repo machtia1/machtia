@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { registrarRegaliasRedAlterna } from '@/lib/redAlterna';
+import { registrarRegaliasRedAlterna, insertarEnRedAlterna } from '@/lib/redAlterna';
 import { insertarEnRedUsuarios } from '@/lib/redUsuarios';
 
 export async function POST(request: Request) {
@@ -41,6 +41,12 @@ export async function POST(request: Request) {
   // propia red y no se insertan bajo nadie).
   if (usuario.invitadoPorId) {
     await insertarEnRedUsuarios(usuario.invitadoPorId, usuario.id);
+
+    // Árbol de la Red Alterna (8 ramas por nivel, confirmado por el
+    // cliente el 18 sept 2026): se inserta dentro de la red de quien
+    // invitó realmente, ANTES de calcular regalías, porque estas
+    // ahora se pagan según la posición en este árbol.
+    await insertarEnRedAlterna(usuario.invitadoPorId, usuario.id);
   }
 
   // Momento exacto confirmado por el cliente: las regalías de la Red
