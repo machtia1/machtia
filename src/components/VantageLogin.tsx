@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, Eye, EyeOff, LayoutGrid, Lock, Monitor, TrendingUp } from 'lucide-react';
+import { BookOpen, Briefcase, Check, Eye, EyeOff, GraduationCap, Lock, Users } from 'lucide-react';
 
 /**
  * Rediseño del Login pedido por el cliente el 20 sept 2026 — replica
@@ -15,6 +15,10 @@ import { Camera, Check, Eye, EyeOff, LayoutGrid, Lock, Monitor, TrendingUp } fro
  * diseño de "hoja inferior" estirado a pantalla completa se vería
  * roto, pero todos los elementos visuales (colores, animación,
  * textos, tarjeta) son los mismos.
+ *
+ * Los 4 íconos que orbitan representan las secciones reales del menú
+ * (pedido por el cliente el 20 sept 2026, "iconitos relacionados al
+ * menú"): Mi Oficina, Mi Red, Cursos y Universidad Machtia®.
  *
  * Toda la funcionalidad que ya tenía el login se conserva tal cual:
  * correo + contraseña, mostrar/ocultar contraseña, mensaje de error,
@@ -66,7 +70,13 @@ export default function VantageLogin() {
       {/* ---------- HEADER ---------- */}
       <header className="header">
         <a href="#" className="brand" aria-label="Club Machtia — inicio">
-          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="brand-logo" />
+          <img
+            src="/brand/logo-lockup-white.png"
+            alt="Club Machtia"
+            className="brand-logo"
+            width={73}
+            height={28}
+          />
         </a>
         <a href="mailto:contacto@machtiaeducacion.com" className="help-link">
           Ayuda
@@ -81,7 +91,7 @@ export default function VantageLogin() {
             <div className="ring ring-inner" />
 
             <div className="orbit-group">
-              {[LayoutGrid, Monitor, TrendingUp, Camera].map((Icon, i) => (
+              {[Briefcase, Users, BookOpen, GraduationCap].map((Icon, i) => (
                 <div key={i} className={`orbit-item orbit-item-${i}`}>
                   <div className="orbit-badge">
                     <Icon size={16} />
@@ -91,7 +101,13 @@ export default function VantageLogin() {
             </div>
 
             <div className="crest">
-              <img src="/brand/icon-color.png" alt="" className="crest-icon" />
+              <img
+                src="/brand/icon-color.png"
+                alt=""
+                className="crest-icon"
+                width={56}
+                height={56}
+              />
             </div>
           </div>
 
@@ -186,7 +202,7 @@ export default function VantageLogin() {
 
       <style jsx>{`
         .page {
-          min-height: 100dvh;
+          min-height: 100svh;
           background: radial-gradient(ellipse 90% 60% at 50% 0%, #0f1a3d 0%, #0a0e27 45%, #060915 100%);
           color: #fff;
           font-family: 'Century Gothic', 'League Spartan', Arial, sans-serif;
@@ -311,7 +327,7 @@ export default function VantageLogin() {
           height: 0;
         }
         .orbit-item-0 { transform: rotate(0deg) translateX(105px); }
-        .orbit-item-1 { transform: rotate(90deg) translateX(65px) rotate(90deg) translateY(0); }
+        .orbit-item-1 { transform: rotate(90deg) translateX(65px); }
         .orbit-item-2 { transform: rotate(180deg) translateX(105px); }
         .orbit-item-3 { transform: rotate(270deg) translateX(65px); }
 
@@ -563,7 +579,7 @@ export default function VantageLogin() {
             padding: 20px 48px 60px;
             max-width: 1180px;
             margin: 0 auto;
-            min-height: calc(100dvh - 84px);
+            min-height: calc(100svh - 84px);
           }
 
           .hero {
