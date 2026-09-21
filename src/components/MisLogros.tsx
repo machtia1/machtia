@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { LogrosUsuario, CategoriaLogro } from '@/lib/logros-types';
 import LogroBadge from './LogroBadge';
+import LoadingLogo from './LoadingLogo';
 
 const PESTANAS: { id: CategoriaLogro; label: string }[] = [
   { id: 'academico', label: 'Logros Académicos' },
@@ -65,9 +66,7 @@ export default function MisLogros() {
 
       {error && <p className="text-red-600 text-[13px] mb-4">{error}</p>}
 
-      {!datos && !error && (
-        <p className="text-[#6B7280] text-[14px]">Cargando tus logros...</p>
-      )}
+      {!datos && !error && <LoadingLogo label="Cargando tus logros..." />}
 
       {pestanaActiva === 'academico' && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[13px] rounded-xl px-4 py-3 mb-5">

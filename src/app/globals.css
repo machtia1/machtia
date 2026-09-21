@@ -43,6 +43,15 @@ h1, h2, h3, h4 {
 .animate-fade-down  { animation: fade-down  0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-fade-scale { animation: fade-scale 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+/* Ícono de carga animado del logo (pedido por el cliente el 20 sept 2026) */
+@keyframes logo-pulse {
+  0%, 100% { transform: scale(0.86); opacity: 0.55; }
+  50%      { transform: scale(1);    opacity: 1; }
+}
+.animate-logo-pulse {
+  animation: logo-pulse 1.15s ease-in-out infinite;
+}
+
 .bg-drift {
   animation: drift 14s ease-in-out infinite;
 }

@@ -15,11 +15,12 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   }
 
-  const anuncios = await prisma.anuncio.findMany({
+  const notificaciones = await prisma.notificacion.findMany({
     orderBy: { creadoEn: 'desc' },
+    take: 30,
   });
 
-  return NextResponse.json({ anuncios });
+  return NextResponse.json({ notificaciones });
 }
 
 export async function POST(request: Request) {
@@ -27,22 +28,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   }
 
-  const { etiqueta, texto, mediaUrl, mediaTipo } = await request.json();
-  if (!etiqueta?.trim() || !texto?.trim()) {
-    return NextResponse.json({ error: 'Falta la etiqueta o el texto del anuncio' }, { status: 400 });
+  const { mensaje } = await request.json();
+  if (!mensaje?.trim()) {
+    return NextResponse.json({ error: 'Falta el mensaje de la notificación' }, { status: 400 });
   }
-  if (mediaTipo && mediaTipo !== 'IMAGEN' && mediaTipo !== 'VIDEO') {
-    return NextResponse.json({ error: 'Tipo de archivo no válido' }, { status: 400 });
+  if (mensaje.trim().length > 300) {
+    return NextResponse.json({ error: 'El mensaje no debe pasar de 300 caracteres' }, { status: 400 });
   }
 
-  const anuncio = await prisma.anuncio.create({
-    data: {
-      etiqueta: etiqueta.trim(),
-      texto: texto.trim(),
-      mediaUrl: mediaUrl || null,
-      mediaTipo: mediaUrl ? mediaTipo : null,
-    },
+  const notificacion = await prisma.notificacion.create({
+    data: { mensaje: mensaje.trim() },
   });
 
-  return NextResponse.json({ anuncio });
+  return NextResponse.json({ notificacion });
 }

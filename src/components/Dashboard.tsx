@@ -3,8 +3,38 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, ChevronRight, Copy, Menu } from 'lucide-react';
+import {
+  Award,
+  Bell,
+  BookOpen,
+  Bot,
+  Briefcase,
+  CalendarDays,
+  Check,
+  CheckSquare,
+  ChevronRight,
+  Copy,
+  CreditCard,
+  DollarSign,
+  Gift,
+  GraduationCap,
+  Handshake,
+  HeartHandshake,
+  type LucideIcon,
+  Library,
+  LayoutGrid,
+  Megaphone,
+  Menu,
+  Network,
+  Smartphone,
+  Trophy,
+  UserPlus,
+  Users,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { useCountdown } from '@/lib/useCountdown';
+import LoadingLogo from './LoadingLogo';
 
 type Role = 'administrador' | 'profesor' | 'socio' | 'usuario' | 'asistente';
 
@@ -28,33 +58,48 @@ const ROLE_NOTES: Record<Role, string> = {
     'Sesión de Asistente Administrativo: puedes editar anuncios, revisar contenido y moderar foros.',
 };
 
-const NAV_SECTIONS: { label: string; href?: string; children?: { label: string; href?: string }[] }[] = [
+interface NavChild {
+  label: string;
+  href?: string;
+  icon: LucideIcon;
+}
+
+interface NavSection {
+  label: string;
+  href?: string;
+  icon: LucideIcon;
+  children?: NavChild[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Mi Oficina',
+    icon: Briefcase,
     children: [
-      { label: 'Mi Suscripción', href: '/home/mi-oficina/suscripcion' },
-      { label: 'Mis Logros', href: '/home/mi-oficina/logros' },
-      { label: 'Mis Ganancias', href: '/home/mi-oficina/ganancias' },
+      { label: 'Mi Suscripción', href: '/home/mi-oficina/suscripcion', icon: CreditCard },
+      { label: 'Mis Logros', href: '/home/mi-oficina/logros', icon: Trophy },
+      { label: 'Mis Ganancias', href: '/home/mi-oficina/ganancias', icon: DollarSign },
     ],
   },
   {
     label: 'Mi Red',
+    icon: Users,
     children: [
-      { label: 'Mis Referidos', href: '/home/red-usuarios' },
-      { label: 'Mi Red 2x15', href: '/home/red-usuarios' },
+      { label: 'Mis Referidos', href: '/home/red-usuarios', icon: UserPlus },
+      { label: 'Mi Red 2x15', href: '/home/red-usuarios', icon: Network },
     ],
   },
-  { label: 'Cursos', href: '/home/cursos' },
-  { label: 'Talleres', href: '/home/talleres' },
-  { label: 'Biblioteca Digital', href: '/home/proximamente/biblioteca-digital' },
-  { label: 'Universidad Machtia®', href: '/home/proximamente/universidad-machtia' },
-  { label: 'Eventos especiales', href: '/home/proximamente/eventos-especiales' },
-  { label: 'SEP-Conocer', href: '/home/proximamente/sep-conocer' },
-  { label: 'Romi®', href: '/home/proximamente/romi' },
-  { label: 'Servicios Digitales', href: '/home/proximamente/servicios-digitales' },
-  { label: 'Sorteos', href: '/home/proximamente/sorteos' },
-  { label: 'Fundación Machtia®', href: '/home/proximamente/fundacion-machtia' },
-  { label: 'Negocios y Alianzas', href: '/home/proximamente/negocios-alianzas' },
+  { label: 'Cursos', href: '/home/cursos', icon: BookOpen },
+  { label: 'Talleres', href: '/home/talleres', icon: Wrench },
+  { label: 'Biblioteca Digital', href: '/home/proximamente/biblioteca-digital', icon: Library },
+  { label: 'Universidad Machtia®', href: '/home/proximamente/universidad-machtia', icon: GraduationCap },
+  { label: 'Eventos especiales', href: '/home/proximamente/eventos-especiales', icon: CalendarDays },
+  { label: 'SEP-Conocer', href: '/home/proximamente/sep-conocer', icon: Award },
+  { label: 'Romi®', href: '/home/proximamente/romi', icon: Bot },
+  { label: 'Servicios Digitales', href: '/home/proximamente/servicios-digitales', icon: Smartphone },
+  { label: 'Sorteos', href: '/home/proximamente/sorteos', icon: Gift },
+  { label: 'Fundación Machtia®', href: '/home/proximamente/fundacion-machtia', icon: HeartHandshake },
+  { label: 'Negocios y Alianzas', href: '/home/proximamente/negocios-alianzas', icon: Handshake },
 ];
 
 
@@ -72,6 +117,14 @@ interface AnuncioDashboard {
   id: string;
   etiqueta: string;
   texto: string;
+  creadoEn: string;
+  mediaUrl: string | null;
+  mediaTipo: 'IMAGEN' | 'VIDEO' | null;
+}
+
+interface NotificacionDashboard {
+  id: string;
+  mensaje: string;
   creadoEn: string;
 }
 
@@ -110,6 +163,9 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [anuncios, setAnuncios] = useState<AnuncioDashboard[] | null>(null);
+  const [notificaciones, setNotificaciones] = useState<NotificacionDashboard[] | null>(null);
+  const [notificacionesOpen, setNotificacionesOpen] = useState(false);
+  const [hayNoLeidas, setHayNoLeidas] = useState(false);
   const countdown = useCountdown('2026-10-30T22:00:00-06:00', '¡Campaña activa!');
 
   useEffect(() => {
@@ -132,6 +188,30 @@ export default function Dashboard() {
       .catch(() => setAnuncios([]));
   }, []);
 
+  useEffect(() => {
+    fetch('/api/notificaciones')
+      .then((res) => res.json())
+      .then((data) => {
+        setNotificaciones(data.notificaciones ?? []);
+        setHayNoLeidas(Boolean(data.hayNoLeidas));
+      })
+      .catch(() => setNotificaciones([]));
+  }, []);
+
+  // Bloquea el scroll de la página de fondo mientras el menú (sidebar)
+  // está abierto en celular/tablet — antes se desplazaban los dos a la
+  // vez, pedido corregir por el cliente el 20 sept 2026.
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarOpen]);
+
   async function handleLogout(e: React.MouseEvent) {
     e.preventDefault();
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -139,12 +219,17 @@ export default function Dashboard() {
     router.refresh();
   }
 
+  async function abrirNotificaciones() {
+    const abriendo = !notificacionesOpen;
+    setNotificacionesOpen(abriendo);
+    if (abriendo && hayNoLeidas) {
+      setHayNoLeidas(false);
+      fetch('/api/notificaciones/marcar-vistas', { method: 'POST' }).catch(() => {});
+    }
+  }
+
   if (loadingUser) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F4F6FB] text-[#1C1E2B] text-[14px]">
-        Cargando...
-      </div>
-    );
+    return <LoadingLogo fullScreen label="Cargando..." />;
   }
 
   if (!user) {
@@ -157,26 +242,44 @@ export default function Dashboard() {
   const linkInvitacion = `machtiaeducacion.com/invitacion/${user.linkInvitacion}`;
 
   return (
-    <div className="flex min-h-screen bg-[#F4F6FB] text-[#1C1E2B]">
+    <div className="flex min-h-screen bg-[#F4F6FB] text-[#1C1E2B] overflow-x-hidden">
+      {/* Fondo oscuro detrás del menú en celular/tablet — al tocarlo se
+          cierra el menú (antes no había forma de cerrarlo). */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={`w-[264px] bg-white border-r border-[#E4E7EE] p-4 fixed lg:sticky top-0 h-screen overflow-y-auto z-30 transition-transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex items-center px-2 pb-5">
+        <div className="flex items-center justify-between px-2 pb-5">
           <img src="/brand/logo-lockup-color.png" alt="Club Machtia" className="h-9 w-auto" />
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden w-8 h-8 rounded-lg hover:bg-[#F4F6FB] flex items-center justify-center text-[#6B7280] shrink-0"
+            aria-label="Cerrar menú"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="bg-[#F4F6FB] rounded-[10px] px-3 py-2.5 mb-4">
-          <div className="text-[13px] font-semibold">{nombreCompleto}</div>
-          <div className="text-[11px] font-bold text-cm-primary uppercase tracking-wide">
+        <div className="bg-[#F4F6FB] rounded-[10px] px-3 py-2.5 mb-4 min-w-0">
+          <div className="text-[13px] font-semibold truncate">{nombreCompleto}</div>
+          <div className="text-[11px] font-bold text-cm-primary uppercase tracking-wide truncate">
             {ROLE_LABELS[role]}
           </div>
         </div>
 
         <nav className="flex flex-col gap-0.5">
-          <a className="rounded-lg bg-cm-primary text-white text-[14px] font-medium px-3 py-2.5">
+          <a className="rounded-lg bg-cm-primary text-white text-[14px] font-medium px-3 py-2.5 flex items-center gap-2.5">
+            <LayoutGrid size={16} />
             Inicio
           </a>
 
@@ -185,9 +288,11 @@ export default function Dashboard() {
               <Link
                 key={section.label}
                 href={section.href}
-                className="rounded-lg hover:bg-[#F4F6FB] text-[14px] font-medium px-3 py-2.5 block"
+                onClick={() => setSidebarOpen(false)}
+                className="rounded-lg hover:bg-[#F4F6FB] text-[14px] font-medium px-3 py-2.5 flex items-center gap-2.5"
               >
-                {section.label}
+                <section.icon size={16} className="text-[#6B7280] shrink-0" />
+                <span className="min-w-0 break-words">{section.label}</span>
               </Link>
             ) : (
             <div key={section.label}>
@@ -197,11 +302,14 @@ export default function Dashboard() {
                 }
                 className="w-full flex items-center justify-between rounded-lg hover:bg-[#F4F6FB] text-[14px] font-medium px-3 py-2.5 text-left"
               >
-                {section.label}
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <section.icon size={16} className="text-[#6B7280] shrink-0" />
+                  <span className="truncate">{section.label}</span>
+                </span>
                 {section.children && (
                   <ChevronRight
                     size={13}
-                    className={`text-[#6B7280] transition-transform ${
+                    className={`text-[#6B7280] shrink-0 transition-transform ${
                       openSection === section.label ? 'rotate-90' : ''
                     }`}
                   />
@@ -214,17 +322,20 @@ export default function Dashboard() {
                       <Link
                         key={child.label}
                         href={child.href}
-                        className="text-[13px] text-[#6B7280] hover:text-[#1C1E2B] hover:bg-[#F4F6FB] rounded-md px-3 py-2"
+                        onClick={() => setSidebarOpen(false)}
+                        className="text-[13px] text-[#6B7280] hover:text-[#1C1E2B] hover:bg-[#F4F6FB] rounded-md px-3 py-2 flex items-center gap-2"
                       >
-                        {child.label}
+                        <child.icon size={14} className="shrink-0" />
+                        <span className="min-w-0 break-words">{child.label}</span>
                       </Link>
                     ) : (
                       <a
                         key={child.label}
                         href="#"
-                        className="text-[13px] text-[#6B7280] hover:text-[#1C1E2B] hover:bg-[#F4F6FB] rounded-md px-3 py-2"
+                        className="text-[13px] text-[#6B7280] hover:text-[#1C1E2B] hover:bg-[#F4F6FB] rounded-md px-3 py-2 flex items-center gap-2"
                       >
-                        {child.label}
+                        <child.icon size={14} className="shrink-0" />
+                        <span className="min-w-0 break-words">{child.label}</span>
                       </a>
                     )
                   )}
@@ -237,32 +348,40 @@ export default function Dashboard() {
           {role === 'administrador' && (
             <Link
               href="/home/red-general"
-              className="mt-3 pt-3 border-t border-[#E4E7EE] rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 block"
+              onClick={() => setSidebarOpen(false)}
+              className="mt-3 pt-3 border-t border-[#E4E7EE] rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
             >
+              <LayoutGrid size={16} className="shrink-0" />
               Panel de Administrador
             </Link>
           )}
           {role === 'administrador' && (
             <Link
               href="/home/aprobaciones"
-              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 block"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
             >
+              <CheckSquare size={16} className="shrink-0" />
               Aprobar registros
             </Link>
           )}
           {role === 'administrador' && (
             <Link
               href="/home/usuarios"
-              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 block"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
             >
+              <Users size={16} className="shrink-0" />
               Usuarios
             </Link>
           )}
           {role === 'administrador' && (
             <Link
               href="/home/anuncios"
-              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 block"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
             >
+              <Megaphone size={16} className="shrink-0" />
               Anuncios
             </Link>
           )}
@@ -293,13 +412,36 @@ export default function Dashboard() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => alert('Aquí se desplegarían las notificaciones (Elemento 2/3).')}
-              className="w-9 h-9 rounded-full border border-[#E4E7EE] flex items-center justify-center relative"
-            >
-              <Bell size={16} />
-              <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={abrirNotificaciones}
+                className="w-9 h-9 rounded-full border border-[#E4E7EE] flex items-center justify-center relative"
+                aria-label="Notificaciones"
+              >
+                <Bell size={16} />
+                {hayNoLeidas && (
+                  <span className="absolute top-1.5 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                )}
+              </button>
+              {notificacionesOpen && (
+                <div className="absolute right-0 top-11 bg-white border border-[#E4E7EE] rounded-lg w-[300px] max-w-[85vw] shadow-xl p-2 max-h-[70vh] overflow-y-auto">
+                  <div className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wide px-2 py-1.5">
+                    Notificaciones
+                  </div>
+                  {(notificaciones ?? []).length === 0 && (
+                    <p className="text-[13px] text-[#6B7280] px-2 py-3">No hay notificaciones todavía.</p>
+                  )}
+                  {(notificaciones ?? []).map((n) => (
+                    <div key={n.id} className="px-2 py-2.5 border-t border-[#E4E7EE] first:border-0">
+                      <div className="text-[13px] break-words">{n.mensaje}</div>
+                      <div className="text-[11px] text-[#6B7280] mt-0.5">
+                        {formatearFechaAnuncio(n.creadoEn)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="relative">
               <button
@@ -348,11 +490,11 @@ export default function Dashboard() {
           </p>
 
           <div className="bg-white border border-[#E4E7EE] rounded-2xl px-5 py-4 flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div>
+            <div className="min-w-0">
               <div className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wide mb-1">
                 Tu link de invitación
               </div>
-              <div className="text-[14px] font-semibold text-cm-primaryDark">
+              <div className="text-[14px] font-semibold text-cm-primaryDark break-all">
                 {linkInvitacion}
               </div>
             </div>
@@ -372,9 +514,7 @@ export default function Dashboard() {
           <div className="grid lg:grid-cols-[2fr_1fr] gap-5">
             <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5">
               <h2 className="text-[15px] font-semibold mb-3">Anuncios y avisos</h2>
-              {anuncios === null && (
-                <p className="text-[13px] text-[#6B7280] py-2">Cargando anuncios...</p>
-              )}
+              {anuncios === null && <LoadingLogo size={28} label="Cargando anuncios..." />}
               {anuncios !== null && anuncios.length === 0 && (
                 <p className="text-[13px] text-[#6B7280] py-2">No hay anuncios por ahora.</p>
               )}
@@ -383,7 +523,21 @@ export default function Dashboard() {
                   <span className="inline-block text-[11px] font-bold text-cm-primary bg-[#ECECFF] px-2 py-0.5 rounded-full mb-1.5">
                     {a.etiqueta}
                   </span>
-                  <div className="text-[13px]">{a.texto}</div>
+                  <div className="text-[13px] break-words">{a.texto}</div>
+                  {a.mediaUrl && a.mediaTipo === 'IMAGEN' && (
+                    <img
+                      src={a.mediaUrl}
+                      alt={a.etiqueta}
+                      className="mt-2 rounded-lg w-full max-h-[280px] object-cover border border-[#E4E7EE]"
+                    />
+                  )}
+                  {a.mediaUrl && a.mediaTipo === 'VIDEO' && (
+                    <video
+                      src={a.mediaUrl}
+                      controls
+                      className="mt-2 rounded-lg w-full max-h-[280px] border border-[#E4E7EE]"
+                    />
+                  )}
                   <div className="text-[11px] text-[#6B7280] mt-1">{formatearFechaAnuncio(a.creadoEn)}</div>
                 </div>
               ))}

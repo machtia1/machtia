@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import LoadingLogo from './LoadingLogo';
 
 interface Nodo {
   id: string;
@@ -189,7 +190,7 @@ export default function RedUsuarios() {
   }
 
   if (cargando) {
-    return <div className="p-8 text-[14px] text-[#6B7280]">Cargando tu red...</div>;
+    return <LoadingLogo label="Cargando tu red..." fullScreen />;
   }
 
   if (error || !datos) {

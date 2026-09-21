@@ -7,7 +7,7 @@ export async function GET() {
     where: { activo: true },
     orderBy: { creadoEn: 'desc' },
     take: 10,
-    select: { id: true, etiqueta: true, texto: true, creadoEn: true },
+    select: { id: true, etiqueta: true, texto: true, creadoEn: true, mediaUrl: true, mediaTipo: true },
   });
 
   return NextResponse.json({ anuncios });

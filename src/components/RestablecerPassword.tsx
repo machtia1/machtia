@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingLogo from './LoadingLogo';
 
 export default function RestablecerPassword({ token }: { token: string }) {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function RestablecerPassword({ token }: { token: string }) {
   if (cargando) {
     return (
       <div className="min-h-screen bg-[#0A0E27] text-white flex items-center justify-center">
-        Cargando...
+        <LoadingLogo label="Cargando..." className="[&_p]:text-white/70" />
       </div>
     );
   }

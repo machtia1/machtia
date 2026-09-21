@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Camera, Check, Copy } from 'lucide-react';
+import LoadingLogo from './LoadingLogo';
 
 interface Perfil {
   nombre: string;
@@ -122,7 +123,7 @@ export default function MiSuscripcion() {
   if (!perfil) {
     return (
       <div className="p-6 sm:p-8">
-        <p className="text-[#6B7280] text-[14px]">Cargando tu perfil...</p>
+        <LoadingLogo label="Cargando tu perfil..." />
       </div>
     );
   }

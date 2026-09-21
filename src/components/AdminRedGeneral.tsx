@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import LoadingLogo from './LoadingLogo';
 
 const MAX_NIVEL_RESTRINGIDO = 8;
 
@@ -134,7 +135,7 @@ export default function AdminRedGeneral() {
   }
 
   if (!slots && !error) {
-    return <div className="p-8 text-[14px] text-[#6B7280]">Cargando espacios...</div>;
+    return <LoadingLogo label="Cargando espacios..." fullScreen />;
   }
 
   return (

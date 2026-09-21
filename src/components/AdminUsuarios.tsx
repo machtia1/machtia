@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import LoadingLogo from './LoadingLogo';
 
 interface UsuarioFila {
   id: string;
@@ -139,7 +140,7 @@ export default function AdminUsuarios() {
   });
 
   if (cargando) {
-    return <div className="p-8 text-[14px] text-[#6B7280]">Cargando usuarios...</div>;
+    return <LoadingLogo label="Cargando usuarios..." fullScreen />;
   }
 
   return (

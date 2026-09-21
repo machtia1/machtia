@@ -125,6 +125,11 @@ model User {
   // nueva ni se mueve de posición. Ver prisma/backfill-red-general.mjs.
   reservado Boolean @default(false)
 
+  // Última vez que este usuario abrió el panel de notificaciones (🔔
+  // del Dashboard) — se usa para saber si hay notificaciones nuevas
+  // sin leer. null = nunca lo ha abierto (todo cuenta como sin leer).
+  ultimaNotificacionVistaEn DateTime?
+
   inactivoDesde DateTime?
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime  @updatedAt
@@ -165,6 +170,13 @@ model Anuncio {
   etiqueta String // ej. "Lanzamiento", "Cursos", "Plataforma"
   texto    String
 
+  // Imagen o video corto opcional (pedido por el cliente el 20 sept
+  // 2026). Se sube a Vercel Blob desde el Panel de Administrador →
+  // Anuncios — ver src/app/api/admin/anuncios/media/route.ts para las
+  // medidas/duración máximas aplicadas.
+  mediaUrl  String?
+  mediaTipo MediaTipo?
+
   // Si está en false, deja de mostrarse en el Dashboard de los
   // usuarios pero se conserva (no se borra) para poder reactivarlo.
   activo Boolean @default(true)
@@ -173,6 +185,27 @@ model Anuncio {
   actualizadoEn DateTime @updatedAt
 
   @@index([activo, creadoEn])
+}
+
+enum MediaTipo {
+  IMAGEN
+  VIDEO
+}
+
+// ============================================================
+// Notificaciones directas — botón 🔔 del Dashboard. Distintas de los
+// Anuncios: son mensajes cortos que el Administrador emite para
+// avisar algo puntual a todos los usuarios (pedido por el cliente el
+// 20 sept 2026, "Crear notificación" dentro de Panel de
+// Administrador → Anuncios).
+// ============================================================
+model Notificacion {
+  id      String @id @default(cuid())
+  mensaje String
+
+  creadoEn DateTime @default(now())
+
+  @@index([creadoEn])
 }
 
 // Preregistro (Fase 1): antes de que exista una cuenta real de User.

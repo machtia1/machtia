@@ -19,7 +19,13 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const data: { etiqueta?: string; texto?: string; activo?: boolean } = {};
+  const data: {
+    etiqueta?: string;
+    texto?: string;
+    activo?: boolean;
+    mediaUrl?: string | null;
+    mediaTipo?: 'IMAGEN' | 'VIDEO' | null;
+  } = {};
 
   if (typeof body.etiqueta === 'string') {
     if (!body.etiqueta.trim()) {
@@ -35,6 +41,19 @@ export async function PATCH(
   }
   if (typeof body.activo === 'boolean') {
     data.activo = body.activo;
+  }
+  // mediaUrl: null (o "") quita la imagen/video del anuncio.
+  if ('mediaUrl' in body) {
+    if (!body.mediaUrl) {
+      data.mediaUrl = null;
+      data.mediaTipo = null;
+    } else {
+      if (body.mediaTipo !== 'IMAGEN' && body.mediaTipo !== 'VIDEO') {
+        return NextResponse.json({ error: 'Tipo de archivo no válido' }, { status: 400 });
+      }
+      data.mediaUrl = body.mediaUrl;
+      data.mediaTipo = body.mediaTipo;
+    }
   }
 
   const existente = await prisma.anuncio.findUnique({ where: { id: params.id } });

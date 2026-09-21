@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { LogrosUsuario } from '@/lib/logros-types';
 import LogroBadge from './LogroBadge';
+import LoadingLogo from './LoadingLogo';
 
 interface Movimiento {
   id: string;
@@ -59,7 +60,7 @@ export default function MisGanancias() {
 
       {error && <p className="text-red-600 text-[13px] mb-4">{error}</p>}
 
-      {!resumen && !error && <p className="text-[#6B7280] text-[14px]">Cargando...</p>}
+      {!resumen && !error && <LoadingLogo label="Cargando..." />}
 
       {resumen && (
         <>

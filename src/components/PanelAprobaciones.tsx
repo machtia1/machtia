@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import LoadingLogo from './LoadingLogo';
 
 interface Pendiente {
   id: string;
@@ -121,9 +122,7 @@ export default function PanelAprobaciones() {
           </div>
         )}
 
-        {pendientes === null && !error && (
-          <p className="text-[#6B7280] text-[14px]">Cargando...</p>
-        )}
+        {pendientes === null && !error && <LoadingLogo label="Cargando..." />}
 
         {pendientes && pendientes.length === 0 && (
           <div className="bg-white border border-[#E4E7EE] rounded-2xl p-10 text-center">
