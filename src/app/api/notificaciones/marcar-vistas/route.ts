@@ -12,10 +12,16 @@ export async function POST() {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  await prisma.user.update({
-    where: { id: session.userId },
-    data: { ultimaNotificacionVistaEn: new Date() },
-  });
+  await Promise.all([
+    prisma.user.update({
+      where: { id: session.userId },
+      data: { ultimaNotificacionVistaEn: new Date() },
+    }),
+    prisma.notificacionUsuario.updateMany({
+      where: { destinatarioId: session.userId, leida: false },
+      data: { leida: true },
+    }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

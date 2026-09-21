@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import LoadingLogo from './LoadingLogo';
+import AdminTabs from './AdminTabs';
 
 interface Anuncio {
   id: string;
@@ -266,6 +267,7 @@ export default function AdminAnuncios() {
 
   return (
     <div className="p-6 sm:p-8 max-w-3xl">
+      <AdminTabs />
       <h1 className="text-[22px] font-semibold mb-1">Anuncios y avisos</h1>
       <p className="text-[#6B7280] text-[14px] mb-6">
         Lo que publiques aquí aparece en la sección "Anuncios y avisos" del Dashboard de todos los

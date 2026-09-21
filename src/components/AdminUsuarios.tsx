@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import LoadingLogo from './LoadingLogo';
+import AdminTabs from './AdminTabs';
 
 interface UsuarioFila {
   id: string;
@@ -145,6 +146,7 @@ export default function AdminUsuarios() {
 
   return (
     <div className="p-6 sm:p-8">
+      <AdminTabs />
       <h1 className="text-[22px] font-semibold mb-1">Usuarios</h1>
       <p className="text-[#6B7280] text-[14px] mb-5">
         Lista completa de cuentas registradas, con su patrocinador y tipo de suscripción.

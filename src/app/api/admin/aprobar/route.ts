@@ -4,6 +4,7 @@ import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { registrarRegaliasRedAlterna, insertarEnRedAlterna } from '@/lib/redAlterna';
 import { insertarEnRedUsuarios } from '@/lib/redUsuarios';
+import { crearNotificacionUsuario } from '@/lib/notificacionesUsuario';
 
 export async function POST(request: Request) {
   const token = cookies().get('session')?.value;
@@ -47,6 +48,28 @@ export async function POST(request: Request) {
     // invitó realmente, ANTES de calcular regalías, porque estas
     // ahora se pagan según la posición en este árbol.
     await insertarEnRedAlterna(usuario.invitadoPorId, usuario.id);
+
+    // Notificaciones personales pedidas por el cliente el 20 sept
+    // 2026: (1) a quien lo invitó directamente con su link, y (2) a
+    // quien le tocó como su posición exacta en la Red 2x15 — no
+    // siempre es la misma persona, porque el árbol puede acomodar al
+    // nuevo usuario más abajo en la rama si el nivel 1 ya está lleno.
+    const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`;
+    await crearNotificacionUsuario(
+      usuario.invitadoPorId,
+      `🎉 ${nombreCompleto} se unió como tu invitado directo con tu link de invitación.`
+    );
+
+    const conPosicion = await prisma.user.findUnique({
+      where: { id: usuario.id },
+      select: { padreRedId: true },
+    });
+    if (conPosicion?.padreRedId) {
+      await crearNotificacionUsuario(
+        conPosicion.padreRedId,
+        `🌐 ${nombreCompleto} se unió a tu Red 2x15.`
+      );
+    }
   }
 
   // Momento exacto confirmado por el cliente: las regalías de la Red

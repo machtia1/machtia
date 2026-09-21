@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import LoadingLogo from './LoadingLogo';
+import AdminTabs from './AdminTabs';
 
 const MAX_NIVEL_RESTRINGIDO = 8;
 
@@ -140,6 +141,7 @@ export default function AdminRedGeneral() {
 
   return (
     <div className="p-6 sm:p-8">
+      <AdminTabs />
       <h1 className="text-[22px] font-semibold mb-1">Red General · Panel de Administrador</h1>
       <p className="text-[#6B7280] text-[14px] mb-6 max-w-2xl">
         Los primeros {MAX_NIVEL_RESTRINGIDO} niveles de la Red General están restringidos: cada

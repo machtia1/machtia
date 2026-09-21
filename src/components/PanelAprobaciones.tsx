@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import LoadingLogo from './LoadingLogo';
+import AdminTabs from './AdminTabs';
 
 interface Pendiente {
   id: string;
@@ -105,6 +106,7 @@ export default function PanelAprobaciones() {
   return (
     <div className="min-h-screen bg-[#F4F6FB]">
       <div className="max-w-4xl mx-auto px-6 py-10">
+        <AdminTabs />
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-[22px] font-semibold text-[#1C1E2B]">Aprobar registros</h1>
           <Link href="/home" className="text-[13px] text-cm-primary font-medium hover:underline">

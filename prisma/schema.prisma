@@ -110,6 +110,10 @@ model User {
   regaliasOrigen      RegaliaRedAlterna[] @relation("RegaliasOrigen")
   regaliasGanadas     RegaliaRedAlterna[] @relation("RegaliasGanadas")
 
+  // Notificaciones personales (invitado directo nuevo, alguien se
+  // unió a su Red 2x15) — ver NotificacionUsuario más abajo.
+  notificacionesRecibidas NotificacionUsuario[]
+
   // true si un Administrador la eliminó definitivamente de la Red de
   // Usuarios ("Eliminar definitivo + comprimir"). Conserva la cuenta
   // y su historial, pero deja de contar como participante activo de
@@ -206,6 +210,28 @@ model Notificacion {
   creadoEn DateTime @default(now())
 
   @@index([creadoEn])
+}
+
+// Notificaciones personales, distintas de Notificacion (que es un
+// aviso general del Administrador para todos): estas se generan solo
+// para UN usuario en particular, automáticamente, cuando (pedido por
+// el cliente el 20 sept 2026):
+//   1. Alguien se registra con su link de invitación personal
+//      (invitadoPorId) — se le notifica a él.
+//   2. Alguien se une a su Red 2x15 (padreRedId, la posición exacta
+//      del árbol) — se le notifica a él.
+// Se generan en el momento de aprobar la solicitud, que es cuando
+// ambas cosas ya son reales (ver /api/admin/aprobar).
+model NotificacionUsuario {
+  id             String  @id @default(cuid())
+  destinatarioId String
+  destinatario   User    @relation(fields: [destinatarioId], references: [id])
+  mensaje        String
+  leida          Boolean @default(false)
+
+  creadoEn DateTime @default(now())
+
+  @@index([destinatarioId, creadoEn])
 }
 
 // Preregistro (Fase 1): antes de que exista una cuenta real de User.
