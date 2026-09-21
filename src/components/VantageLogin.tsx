@@ -93,7 +93,10 @@ export default function VantageLogin() {
             <div className="orbit-group">
               {[Briefcase, Users, BookOpen, GraduationCap].map((Icon, i) => (
                 <div key={i} className={`orbit-item orbit-item-${i}`}>
-                  <div className="orbit-badge">
+                  <div
+                    className="orbit-badge"
+                    style={{ '--badge-offset': `${-(i * 90)}deg` } as React.CSSProperties}
+                  >
                     <Icon size={16} />
                   </div>
                 </div>
@@ -332,18 +335,17 @@ export default function VantageLogin() {
         .orbit-item-3 { transform: rotate(270deg) translateX(65px); }
 
         .orbit-badge {
-          transform: translate(-50%, -50%);
           animation: orbit-spin-reverse 20s linear infinite;
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
-          border: 1px solid rgba(147, 197, 253, 0.55);
-          background: rgba(10, 20, 50, 0.75);
-          box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+          width: 36px;
+          height: 36px;
+          border-radius: 11px;
+          border: 1px solid rgba(147, 197, 253, 0.6);
+          background: linear-gradient(155deg, rgba(56, 189, 248, 0.22), rgba(10, 20, 50, 0.85));
+          box-shadow: 0 0 16px rgba(56, 189, 248, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #dbeafe;
+          color: #e0f2fe;
         }
 
         .eyebrow {
@@ -537,8 +539,8 @@ export default function VantageLogin() {
           to { transform: rotate(360deg); }
         }
         @keyframes orbit-spin-reverse {
-          from { transform: translate(-50%, -50%) rotate(0deg); }
-          to { transform: translate(-50%, -50%) rotate(-360deg); }
+          from { transform: translate(-50%, -50%) rotate(var(--badge-offset, 0deg)); }
+          to { transform: translate(-50%, -50%) rotate(calc(var(--badge-offset, 0deg) - 360deg)); }
         }
         @keyframes pulse-glow {
           0%, 100% { opacity: 0.9; transform: scale(1); }

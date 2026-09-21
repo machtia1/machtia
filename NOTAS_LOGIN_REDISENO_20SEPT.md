@@ -56,6 +56,21 @@ El cliente reportó dos detalles después de ver el login en producción:
    respecto a los otros 3. Se corrigió para que los 4 íconos giren
    exactamente igual, parejos y derechos.
 
+## Corrección de los íconos "chuecos" (real causa, mismo día)
+
+El primer arreglo de los íconos solo corrigió una duplicación de más
+en el ícono #1. Pero el problema de fondo era otro: la animación que
+hace que cada ícono "gire alrededor" del escudo sin voltearse él
+mismo (para que la imagen del ícono siempre se vea derecha, aunque
+esté orbitando) solo cancelaba el giro del grupo completo — no
+cancelaba el ángulo fijo de cada ícono según su posición en el
+círculo (arriba/abajo/derecha/izquierda). Resultado: 3 de los 4
+íconos se veían permanentemente girados (90°, 180° y 270°), solo uno
+se veía derecho. Se corrigió para que los 4 íconos se mantengan
+siempre derechos mientras orbitan, y de paso se les dio un poco más
+de diseño (fondo con degradado y resplandor más definido) para que
+se vean más pulidos, acorde a lo que pidió el cliente.
+
 ## Ajuste final (mismo día): íconos relacionados al menú
 
 El cliente pidió que los 4 íconos que orbitan el escudo, en vez de
