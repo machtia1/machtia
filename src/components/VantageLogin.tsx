@@ -2,24 +2,33 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Menu, X } from 'lucide-react';
+import { Camera, Check, Eye, EyeOff, LayoutGrid, Lock, Monitor, TrendingUp } from 'lucide-react';
 
+/**
+ * Rediseño del Login pedido por el cliente el 20 sept 2026 — replica
+ * exactamente el diseño y la animación del video de ejemplo que
+ * mandó (fondo azul marino oscuro, escudo/copo de nieve animado con
+ * 4 íconos orbitando alrededor, tarjeta de acceso tipo "hoja
+ * deslizante" con el formulario). Mismo diseño y misma animación
+ * tanto en celular como en computadora — en computadora la tarjeta
+ * se acomoda a un lado en vez de ocupar todo el ancho, porque un
+ * diseño de "hoja inferior" estirado a pantalla completa se vería
+ * roto, pero todos los elementos visuales (colores, animación,
+ * textos, tarjeta) son los mismos.
+ *
+ * Toda la funcionalidad que ya tenía el login se conserva tal cual:
+ * correo + contraseña, mostrar/ocultar contraseña, mensaje de error,
+ * estado de carga, link "¿Olvidaste tu contraseña?" → /recuperar, y
+ * el POST a /api/auth/login que redirige a /home.
+ */
 export default function VantageLogin() {
   const router = useRouter();
   const [showPass, setShowPass] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [videoFailed, setVideoFailed] = useState(false);
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  function goToLogin() {
-    setMenuOpen(false);
-    const el = document.getElementById('emailField');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    window.setTimeout(() => el?.focus({ preventScroll: true }), 350);
-  }
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,626 +45,550 @@ export default function VantageLogin() {
         setError(data.error || 'No se pudo iniciar sesión');
         return;
       }
-      router.push('/home');
-      router.refresh();
+      // Igual que en el video de ejemplo: el botón muestra "Acceso
+      // confirmado" un instante antes de entrar, en vez de saltar
+      // directo a la siguiente pantalla.
+      setSuccess(true);
+      window.setTimeout(() => {
+        router.push('/home');
+        router.refresh();
+      }, 650);
     } catch {
       setError('Error de conexión, intenta de nuevo');
-    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="viewport">
-      <section className="screen">
-        {!videoFailed && (
-          <video
-            className="background"
-            autoPlay
-            muted
-            loop
-            playsInline
-            disablePictureInPicture
-            aria-hidden="true"
-            poster="/videos/hero-bg-poster.jpg"
-            src="/videos/hero-bg.mp4"
-            onError={() => setVideoFailed(true)}
-          />
-        )}
-        <div className="vignette" />
+    <main className="page">
+      <div className="bg-glow" aria-hidden="true" />
 
-        {/* ---------- HEADER ---------- */}
-        <header className={`header ${menuOpen ? 'menu-open' : ''}`}>
-          <a href="#" className="brand" aria-label="Club Machtia — inicio">
-            <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="brand-logo" />
-          </a>
+      {/* ---------- HEADER ---------- */}
+      <header className="header">
+        <a href="#" className="brand" aria-label="Club Machtia — inicio">
+          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="brand-logo" />
+        </a>
+        <a href="mailto:contacto@machtiaeducacion.com" className="help-link">
+          Ayuda
+        </a>
+      </header>
 
-          <div className="header-actions" id="tablet-navigation">
-            <nav className="nav">
-              <a href="#" className="active">Inicio</a>
-              <a href="#">Cursos</a>
-              <a href="#">Red</a>
-              <a href="#">Contacto</a>
-            </nav>
-
-            <div className="time-panel">
-              <label>Campaña</label>
-              <span>Lanzamiento&nbsp; • &nbsp;30 oct 2026</span>
-            </div>
-
-            <button className="sign-up" onClick={goToLogin}>
-              Crear cuenta
-            </button>
-          </div>
-
-          <button
-            className="menu-toggle"
-            aria-label="Abrir menú"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-        </header>
-
-        {/* ---------- HERO ---------- */}
+      <div className="content">
+        {/* ---------- IDENTIDAD ANIMADA ---------- */}
         <section className="hero">
-          <div className="hero-content">
-            <h1 className="hero-title">
-              <span className="line line-one">
-                <span className="line-reveal">Aprende y crece</span>
-              </span>
-              <span className="line line-two">
-                <span className="line-reveal">en una sola red.</span>
-              </span>
-            </h1>
+          <div className="orbit-stage" aria-hidden="true">
+            <div className="ring ring-outer" />
+            <div className="ring ring-inner" />
 
-            <p className="hero-copy">
-              Tus cursos, tu red de referidos y tu progreso estaban repartidos
-              en distintos lugares. Club Machtia lo reúne todo en un solo
-              lugar, para que dejes de buscar y empieces a avanzar.
-            </p>
+            <div className="orbit-group">
+              {[LayoutGrid, Monitor, TrendingUp, Camera].map((Icon, i) => (
+                <div key={i} className={`orbit-item orbit-item-${i}`}>
+                  <div className="orbit-badge">
+                    <Icon size={16} />
+                  </div>
+                </div>
+              ))}
+            </div>
 
-            <button
-              className="primary-cta"
-              onClick={goToLogin}
-            >
-              <span className="label">Empezar ahora</span>
-              <span className="arrow-box">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7H12M12 7L7.5 2.5M12 7L7.5 11.5" stroke="white" strokeWidth="1.4" />
-                </svg>
-              </span>
-            </button>
+            <div className="crest">
+              <img src="/brand/icon-color.png" alt="" className="crest-icon" />
+            </div>
           </div>
 
-          {/* ---------- TARJETA GLASS: LOGIN REAL ---------- */}
-          <article className="demo-card">
-            <div className="card-inner">
-              <p className="card-eyebrow">Bienvenido de vuelta</p>
-              <h2 className="card-title">Inicia sesión</h2>
-
-              <form onSubmit={handleSubmit} className="card-form">
-                <input
-                  id="emailField"
-                  type="text"
-                  required
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  placeholder="Correo o usuario"
-                  className="card-input"
-                />
-                <div className="pass-wrap">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Contraseña"
-                    className="card-input"
-                  />
-                  <button
-                    type="button"
-                    className="pass-toggle"
-                    onClick={() => setShowPass((v) => !v)}
-                    aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  >
-                    {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-
-                {error && (
-                  <p style={{ color: '#ff8080', fontSize: '12px', margin: '-2px 0 0' }}>{error}</p>
-                )}
-
-                <a href="/recuperar" className="forgot">¿Olvidaste tu contraseña?</a>
-
-                <button type="submit" disabled={loading} className="watch-button">
-                  {loading ? 'Entrando...' : 'Iniciar sesión'}
-                </button>
-              </form>
-            </div>
-          </article>
+          <p className="eyebrow">Una sola cuenta</p>
+          <h1 className="headline">
+            Todo conectado.
+            <br />
+            Todo en Machtia.
+          </h1>
+          <p className="subcopy">
+            Una experiencia integrada para aprender, conectar y crecer desde cualquier lugar.
+          </p>
         </section>
-      </section>
+
+        {/* ---------- TARJETA DE ACCESO ---------- */}
+        <section className="card">
+          <div className="card-handle" aria-hidden="true" />
+          <div className="card-inner">
+            <p className="card-eyebrow">Acceso seguro</p>
+            <h2 className="card-title">Bienvenido de vuelta</h2>
+            <p className="card-subtitle">Continúa en tu cuenta Club Machtia.</p>
+
+            <form onSubmit={handleSubmit} className="card-form">
+              <label className="field-label" htmlFor="emailField">
+                Correo electrónico
+              </label>
+              <input
+                id="emailField"
+                type="text"
+                required
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                placeholder="nombre@correo.com"
+                className="field-input"
+                autoComplete="username"
+              />
+
+              <label className="field-label" htmlFor="passField">
+                Contraseña
+              </label>
+              <div className="pass-wrap">
+                <input
+                  id="passField"
+                  type={showPass ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Tu contraseña"
+                  className="field-input"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="pass-toggle"
+                  onClick={() => setShowPass((v) => !v)}
+                  aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+
+              <a href="/recuperar" className="forgot">
+                ¿Olvidaste tu contraseña?
+              </a>
+
+              {error && <p className="error-msg">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={`submit-btn ${success ? 'is-success' : ''}`}
+              >
+                {success ? (
+                  <>
+                    <Check size={16} /> Acceso confirmado
+                  </>
+                ) : loading ? (
+                  'Entrando...'
+                ) : (
+                  'Ingresar'
+                )}
+              </button>
+            </form>
+
+            <div className="secure-note">
+              <Lock size={11} />
+              Conexión protegida
+            </div>
+          </div>
+        </section>
+      </div>
 
       <style jsx>{`
-        :root {
+        .page {
+          min-height: 100dvh;
+          background: radial-gradient(ellipse 90% 60% at 50% 0%, #0f1a3d 0%, #0a0e27 45%, #060915 100%);
+          color: #fff;
           font-family: 'Century Gothic', 'League Spartan', Arial, sans-serif;
+          position: relative;
+          overflow-x: hidden;
+          display: flex;
+          flex-direction: column;
         }
 
-        .viewport {
-          position: fixed;
-          inset: 0;
-          isolation: isolate;
-          background: #000;
-          overflow: hidden;
-        }
-
-        .screen {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: 100%;
-          height: 100%;
-          background: #000;
-          --gutter-start: clamp(24px, 4.177vw, 96px);
-          --gutter-end: clamp(24px, 4.04vw, 96px);
-          --header-top: clamp(20px, 2.264vh, 30px);
-          --hero-bottom: clamp(28px, 5.19vh, 64px);
-          --display-size: clamp(40px, 7.2vh, 84px);
-          --display-leading: clamp(50px, 8.6vh, 98px);
-          --copy-size: clamp(14px, 1.7vh, 18px);
-          --copy-leading: clamp(19px, 2.1vh, 24px);
-          --card-width: clamp(230px, 26vh, 300px);
-        }
-
-        .background {
+        .bg-glow {
           position: absolute;
           inset: 0;
-          z-index: -3;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
+          background:
+            radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.16) 0%, transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
           pointer-events: none;
         }
 
-        .vignette {
-          position: absolute;
-          inset: 0;
-          z-index: -2;
-          background:
-            linear-gradient(180deg, rgba(0,0,0,.35), rgba(10,14,39,.15) 30%, rgba(10,14,39,.15) 78%, rgba(0,0,0,.55)),
-            radial-gradient(ellipse at 44% 54%, transparent 25%, rgba(0,0,0,.35) 100%);
-        }
-
         .header {
-          position: absolute;
-          top: var(--header-top);
-          left: var(--gutter-start);
-          right: var(--gutter-end);
-          height: 48px;
+          position: relative;
+          z-index: 2;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          white-space: nowrap;
-          animation: entrance-nav 520ms cubic-bezier(.16,1,.3,1) both;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          text-decoration: none;
+          padding: 20px 24px;
+          animation: fade-down 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         .brand-logo {
-          height: 30px;
+          height: 28px;
           width: auto;
           display: block;
         }
 
-        .header-actions {
-          display: flex;
-          align-items: center;
-          gap: clamp(24px, 2.9vw, 40px);
-        }
-
-        .nav {
-          display: flex;
-          gap: clamp(20px, 2.4vw, 34px);
-        }
-
-        .nav a {
-          color: rgba(229,229,230,.77);
+        .help-link {
+          color: rgba(255, 255, 255, 0.65);
+          font-size: 13px;
+          font-weight: 500;
           text-decoration: none;
-          font-size: 14px;
-          font-weight: 450;
-          letter-spacing: -.02em;
-          text-shadow: 0 1px 3px rgba(0,0,0,.55);
+        }
+        .help-link:hover {
+          color: #fff;
+        }
+
+        .content {
           position: relative;
-          padding-bottom: 4px;
-        }
-
-        .nav a.active {
-          color: #fff;
-        }
-
-        .nav a.active::after {
-          content: '';
-          position: absolute;
-          left: 0;
-          bottom: 0;
-          width: 100%;
-          height: 2px;
-          background: rgba(255,255,255,.82);
-        }
-
-        .time-panel {
-          display: none;
-          padding-left: 12px;
-          border-left: 2px solid rgba(230,230,230,.35);
-        }
-
-        .time-panel label {
-          display: block;
-          font-size: 11px;
-          font-weight: 500;
-          color: rgba(240,240,240,.6);
-          text-transform: uppercase;
-          letter-spacing: .06em;
-        }
-
-        .time-panel span {
-          display: block;
-          font-size: 13px;
-          font-weight: 500;
-          color: rgba(255,255,255,.9);
-        }
-
-        @media (min-width: 900px) {
-          .time-panel { display: block; }
-        }
-
-        .sign-up {
-          background: #fff;
-          color: #101010;
-          border: none;
-          height: 40px;
-          padding: 0 18px;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 13px;
-          letter-spacing: -.02em;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,.72), 0 1px 5px rgba(0,0,0,.34);
-          cursor: pointer;
-        }
-
-        .menu-toggle {
-          display: none;
-          width: 42px;
-          height: 42px;
-          align-items: center;
-          justify-content: center;
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,.15);
-          background: rgba(10,7,7,.35);
-          backdrop-filter: blur(14px);
-          color: #fff;
-        }
-
-        @media (max-width: 640px) {
-          .header-actions { display: none; }
-          .menu-toggle { display: flex; position: relative; z-index: 21; }
-          .header.menu-open {
-            animation: none;
-            transform: none;
-          }
-
-          .header.menu-open .brand { position: relative; z-index: 21; }
-
-          .header.menu-open .header-actions {
-            display: flex;
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 28px;
-            padding: 32px var(--gutter-start);
-            border-radius: 0;
-            border: none;
-            background: #0A0705;
-            min-width: 0;
-          }
-          .header.menu-open .nav { flex-direction: column; gap: 20px; }
-          .header.menu-open .nav a { font-size: 20px; }
-          .header.menu-open .time-panel { display: block; border: none; padding: 0; }
-          .header.menu-open .sign-up { width: 100%; text-align: center; }
-        }
-
-        .hero {
-          position: absolute;
-          inset: 0;
-        }
-
-        .hero-content {
-          position: absolute;
-          left: var(--gutter-start);
-          bottom: var(--hero-bottom);
+          z-index: 1;
+          flex: 1;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-          max-width: 560px;
-          padding: 24px 28px 24px 0;
-          background: radial-gradient(
-            ellipse 130% 110% at 0% 100%,
-            rgba(0,0,0,.68) 0%,
-            rgba(0,0,0,.46) 45%,
-            rgba(0,0,0,.15) 75%,
-            transparent 100%
-          );
-        }
-
-        .hero-title {
-          margin: 0;
-          font-family: 'Montserrat', 'Century Gothic', Arial, sans-serif;
-          font-weight: 600;
-          font-size: var(--display-size);
-          line-height: var(--display-leading);
-          letter-spacing: -.03em;
-          text-shadow: 0 2px 6px rgba(0,0,0,.85), 0 8px 24px rgba(0,0,0,.6);
-        }
-
-        .line {
-          display: block;
-          overflow: hidden;
-        }
-
-        .line-one { color: #fff; }
-        .line-two { color: rgba(226,222,222,.92); }
-
-        .line-reveal {
-          display: block;
-          animation: entrance-line 800ms cubic-bezier(.22,1,.36,1) both;
-        }
-
-        .line-one .line-reveal { animation-delay: 260ms; }
-        .line-two .line-reveal { animation-delay: 400ms; }
-
-        .hero-copy {
-          margin: clamp(14px, 2vh, 22px) 0 0;
-          color: rgba(255,255,255,.94);
-          font-weight: 450;
-          font-size: var(--copy-size);
-          line-height: var(--copy-leading);
-          max-width: 440px;
-          text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 2px 12px rgba(0,0,0,.6);
-          animation: entrance-copy 620ms cubic-bezier(.16,1,.3,1) both;
-          animation-delay: 700ms;
-        }
-
-        .primary-cta {
-          margin-top: clamp(20px, 3vh, 32px);
-          position: relative;
-          display: flex;
           align-items: center;
-          height: 46px;
-          padding: 0 8px 0 22px;
-          border: none;
-          border-radius: 8px;
-          background: #fff;
-          color: #111;
-          box-shadow: 0 1px 5px rgba(0,0,0,.38);
-          font-weight: 550;
-          font-size: 14px;
-          letter-spacing: -.02em;
-          cursor: pointer;
-          gap: 14px;
-          animation: entrance-action 560ms cubic-bezier(.16,1,.3,1) both;
-          animation-delay: 900ms;
+          padding: 8px 20px 0;
         }
 
-        .primary-cta .arrow-box {
-          width: 30px;
-          height: 30px;
-          border-radius: 6px;
-          background: #070909;
+        /* ---------- Identidad animada (escudo + íconos orbitando) ---------- */
+        .hero {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding-top: 8px;
+          animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+          animation-delay: 120ms;
+        }
+
+        .orbit-stage {
+          position: relative;
+          width: 220px;
+          height: 190px;
+          margin-bottom: 18px;
+        }
+
+        .ring {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          border-radius: 50%;
+          border: 1px solid rgba(103, 179, 255, 0.28);
+          transform: translate(-50%, -50%);
+        }
+        .ring-outer {
+          width: 210px;
+          height: 120px;
+          box-shadow: 0 0 26px rgba(56, 189, 248, 0.12) inset;
+        }
+        .ring-inner {
+          width: 130px;
+          height: 130px;
+          border-color: rgba(103, 179, 255, 0.4);
+        }
+
+        .crest {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 84px;
+          height: 84px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, transparent 72%);
+        }
+        .crest-icon {
+          width: 56px;
+          height: 56px;
+          filter: brightness(0) invert(1);
+          animation: pulse-glow 2.6s ease-in-out infinite;
         }
 
-        .demo-card {
+        .orbit-group {
           position: absolute;
-          right: var(--gutter-end);
-          bottom: var(--hero-bottom);
-          width: var(--card-width);
-          border: 1px solid rgba(255,255,255,.13);
-          border-radius: 18px;
-          background: linear-gradient(145deg, rgba(24,22,20,.80), rgba(5,12,14,.86));
-          box-shadow: 0 2px 10px rgba(0,0,0,.44), 0 0 0 3px rgba(255,255,255,.035) inset, 0 0 0 1px rgba(0,0,0,.9);
-          backdrop-filter: blur(14px) saturate(108%);
-          animation: entrance-card 920ms cubic-bezier(.22,1,.36,1) both;
-          animation-delay: 1000ms;
+          inset: 0;
+          animation: orbit-spin 20s linear infinite;
+        }
+        .orbit-item {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 0;
+          height: 0;
+        }
+        .orbit-item-0 { transform: rotate(0deg) translateX(105px); }
+        .orbit-item-1 { transform: rotate(90deg) translateX(65px) rotate(90deg) translateY(0); }
+        .orbit-item-2 { transform: rotate(180deg) translateX(105px); }
+        .orbit-item-3 { transform: rotate(270deg) translateX(65px); }
+
+        .orbit-badge {
+          transform: translate(-50%, -50%);
+          animation: orbit-spin-reverse 20s linear infinite;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          border: 1px solid rgba(147, 197, 253, 0.55);
+          background: rgba(10, 20, 50, 0.75);
+          box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #dbeafe;
+        }
+
+        .eyebrow {
+          margin: 0 0 8px;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #7dd3fc;
+        }
+
+        .headline {
+          margin: 0 0 10px;
+          font-family: 'Montserrat', 'Century Gothic', Arial, sans-serif;
+          font-weight: 700;
+          font-size: clamp(24px, 6vw, 32px);
+          line-height: 1.18;
+          letter-spacing: -0.01em;
+        }
+
+        .subcopy {
+          margin: 0;
+          max-width: 320px;
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        /* ---------- Tarjeta de acceso ---------- */
+        .card {
+          width: 100%;
+          max-width: 440px;
+          margin: 28px 0 0;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 24px 24px 0 0;
+          background: linear-gradient(180deg, rgba(15, 23, 55, 0.92), rgba(8, 12, 30, 0.97));
+          box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06) inset;
+          backdrop-filter: blur(18px);
+          animation: slide-up-sheet 750ms cubic-bezier(0.19, 1, 0.22, 1) both;
+          animation-delay: 220ms;
+        }
+
+        .card-handle {
+          width: 40px;
+          height: 4px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.22);
+          margin: 12px auto 0;
         }
 
         .card-inner {
-          padding: 22px;
+          padding: 22px 26px 26px;
         }
 
         .card-eyebrow {
-          margin: 0 0 2px;
-          color: rgba(255,255,255,.55);
+          margin: 0 0 4px;
           font-size: 11px;
-          font-weight: 500;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #7dd3fc;
         }
 
         .card-title {
-          margin: 0 0 16px;
+          margin: 0 0 4px;
+          font-size: 21px;
+          font-weight: 700;
           color: #fff;
-          font-size: 18px;
-          font-weight: 650;
+        }
+
+        .card-subtitle {
+          margin: 0 0 18px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.55);
         }
 
         .card-form {
           display: flex;
           flex-direction: column;
-          gap: 10px;
         }
 
-        .card-input {
-          height: 40px;
-          padding: 0 12px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,.16);
-          background: rgba(255,255,255,.06);
+        .field-label {
+          font-size: 10.5px;
+          font-weight: 700;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.45);
+          margin-bottom: 6px;
+        }
+        .field-label:not(:first-child) {
+          margin-top: 14px;
+        }
+
+        .field-input {
+          width: 100%;
+          height: 46px;
+          padding: 0 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.05);
           color: #fff;
-          font-size: 13px;
+          font-size: 14px;
           outline: none;
         }
+        .field-input::placeholder {
+          color: rgba(255, 255, 255, 0.32);
+        }
+        .field-input:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+        }
 
-        .card-input::placeholder { color: rgba(255,255,255,.35); }
-        .card-input:focus { border-color: rgba(108,140,255,.7); }
-
-        .pass-wrap { position: relative; }
-
+        .pass-wrap {
+          position: relative;
+        }
         .pass-toggle {
           position: absolute;
-          right: 10px;
+          right: 8px;
           top: 50%;
           transform: translateY(-50%);
-          background: none;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
           border: none;
-          color: rgba(255,255,255,.5);
+          background: #2563eb;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .forgot {
-          font-size: 11.5px;
-          color: rgba(255,255,255,.55);
-          text-decoration: none;
           align-self: flex-end;
-          margin-top: -2px;
-        }
-
-        .watch-button {
-          margin-top: 6px;
-          height: 42px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,.21);
-          background: linear-gradient(145deg, rgba(26,34,36,.86), rgba(16,29,33,.9));
-          color: #fff;
+          margin-top: 8px;
+          font-size: 12px;
           font-weight: 500;
-          font-size: 13.5px;
+          color: rgba(255, 255, 255, 0.55);
+          text-decoration: none;
+        }
+        .forgot:hover {
+          color: #7dd3fc;
+        }
+
+        .error-msg {
+          margin: 10px 0 0;
+          color: #fca5a5;
+          font-size: 12.5px;
+        }
+
+        .submit-btn {
+          margin-top: 18px;
+          height: 48px;
+          border-radius: 14px;
+          border: none;
+          background: linear-gradient(135deg, #38bdf8, #6366f1);
+          color: #fff;
+          font-weight: 700;
+          font-size: 14.5px;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          box-shadow: 0 8px 22px rgba(56, 189, 248, 0.3);
+        }
+        .submit-btn:disabled {
+          opacity: 0.85;
+          cursor: default;
+        }
+        .submit-btn.is-success {
+          background: linear-gradient(135deg, #34d399, #10b981);
+          box-shadow: 0 8px 22px rgba(16, 185, 129, 0.35);
         }
 
-        button, a { transition: filter 140ms, opacity 140ms; }
-        button:hover, a:hover { filter: brightness(1.08); }
-        button:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+        .secure-note {
+          margin-top: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.4);
+        }
 
-        @keyframes entrance-nav {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
+        button, a { transition: filter 140ms, opacity 140ms, color 140ms; }
+        button:hover { filter: brightness(1.06); }
+        button:focus-visible, a:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+
+        @keyframes orbit-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        @keyframes entrance-line {
-          from { transform: translate3d(0,110%,0) skewY(2deg); }
-          to   { transform: translate3d(0,0,0) skewY(0deg); }
+        @keyframes orbit-spin-reverse {
+          from { transform: translate(-50%, -50%) rotate(0deg); }
+          to { transform: translate(-50%, -50%) rotate(-360deg); }
         }
-        @keyframes entrance-copy {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 0.9; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
         }
-        @keyframes entrance-action {
-          from { opacity: 0; transform: translateY(8px) scale(.985); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes fade-down {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes entrance-card {
-          from { opacity: 0; transform: translateY(12px) scale(.968); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slide-up-sheet {
+          from { opacity: 0; transform: translateY(36px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .header, .line-reveal, .hero-copy, .primary-cta, .demo-card {
+          .header, .hero, .card, .crest-icon, .orbit-group, .orbit-badge {
             animation: none !important;
             opacity: 1 !important;
             transform: none !important;
           }
         }
 
-        @media (max-width: 900px) {
-          .viewport {
-            position: relative;
-            height: auto;
-            min-height: 100dvh;
-            overflow-x: hidden;
-            overflow-y: visible;
-          }
-
-          .screen {
-            position: relative;
-            left: 0;
-            top: 0;
-            transform: none;
-            width: 100%;
-            height: auto;
-            min-height: 100dvh;
-            --display-size: clamp(32px, 9vw, 56px);
-            --display-leading: clamp(40px, 10.5vw, 64px);
-            --copy-size: clamp(13px, 3.6vw, 16px);
-            --copy-leading: clamp(18px, 4.6vw, 22px);
-          }
-
-          .background,
-          .vignette {
-            position: fixed;
-          }
-
-          .background {
-            display: none;
-          }
-
-          .screen {
-            background-image: url('/videos/hero-bg-poster.jpg');
-            background-size: cover;
-            background-position: center;
-          }
-
+        /* ---------- Computadora / pantallas anchas ---------- */
+        @media (min-width: 900px) {
           .header {
-            position: relative;
-            top: auto;
-            left: auto;
-            right: auto;
-            margin: var(--header-top) var(--gutter-start) 0;
+            padding: 28px 48px;
+          }
+
+          .content {
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 72px;
+            padding: 20px 48px 60px;
+            max-width: 1180px;
+            margin: 0 auto;
+            min-height: calc(100dvh - 84px);
           }
 
           .hero {
-            position: static;
-            inset: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            min-height: calc(100dvh - 96px);
+            align-items: flex-start;
+            text-align: left;
+            max-width: 460px;
           }
 
-          .demo-card {
-            position: static;
-            margin: 24px var(--gutter-start) 32px;
-            width: auto;
+          .orbit-stage {
+            align-self: center;
           }
 
-          .hero-content {
-            position: static;
-            width: 100%;
-            padding: 20px var(--gutter-start) 24px;
+          .subcopy {
+            max-width: 400px;
+          }
+
+          .card {
             margin: 0;
-            max-width: none;
-            background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55) 40%, rgba(0,0,0,.72));
+            max-width: 400px;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.06) inset;
+          }
+
+          .card-handle {
+            display: none;
           }
         }
       `}</style>
