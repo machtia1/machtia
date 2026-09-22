@@ -74,7 +74,7 @@ export default function VantageLogin() {
             src="/brand/logo-lockup-white.png"
             alt="Club Machtia"
             className="brand-logo"
-            width={73}
+            width={118}
             height={28}
           />
         </a>
