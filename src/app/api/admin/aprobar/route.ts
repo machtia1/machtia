@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { registrarRegaliasRedAlterna, insertarEnRedAlterna } from '@/lib/redAlterna';
 import { insertarEnRedUsuarios } from '@/lib/redUsuarios';
 import { crearNotificacionUsuario } from '@/lib/notificacionesUsuario';
+import { proximoVencimientoMembresia } from '@/lib/membresia';
 
 export async function POST(request: Request) {
   const token = cookies().get('session')?.value;
@@ -27,9 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este usuario ya fue procesado antes' }, { status: 409 });
   }
 
-  const ahora = new Date();
-  const expiraEn = new Date(ahora);
-  expiraEn.setDate(expiraEn.getDate() + 365); // Cada membresía/suscripción dura 365 días, confirmado por el cliente
+  // Todas las membresías se sincronizan al calendario del 30 de
+  // octubre (confirmado por el cliente el 22 sept 2026) — ver
+  // src/lib/membresia.ts.
+  const expiraEn = proximoVencimientoMembresia();
 
   await prisma.user.update({
     where: { id: usuarioId },

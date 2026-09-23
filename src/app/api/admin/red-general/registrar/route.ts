@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { proximoVencimientoMembresia } from '@/lib/membresia';
 
 export async function POST(request: Request) {
   const token = cookies().get('session')?.value;
@@ -40,8 +41,9 @@ export async function POST(request: Request) {
   // prisma/backfill-red-general.mjs) — se ACTUALIZA esa misma fila,
   // nunca se crea una nueva. No se le asigna contraseña aquí — queda
   // pendiente un flujo de "crear tu contraseña" (ver NOTAS_RED_USUARIOS.md).
-  const expiraEnRestringido = new Date();
-  expiraEnRestringido.setDate(expiraEnRestringido.getDate() + 365); // 365 días, misma regla que el resto de las membresías
+  // Misma regla del 30 de octubre que el resto de las membresías —
+  // confirmado por el cliente el 22 sept 2026 (ver src/lib/membresia.ts).
+  const expiraEnRestringido = proximoVencimientoMembresia();
 
   const nuevoUsuario = await prisma.user.update({
     where: { id: slot.usuarioId },
