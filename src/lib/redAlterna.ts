@@ -316,3 +316,61 @@ export async function arbolRedAlterna(usuarioId: string) {
 
   return { niveles, estado: estadoRedAlterna() };
 }
+
+interface NodoAlterna {
+  id: string;
+  nombre: string;
+  apellido: string;
+  status: string;
+  posicionEnPadreAlterna: number | null;
+}
+
+/**
+ * Árbol GRÁFICO (nodo por nodo, no solo el conteo por nivel) de la
+ * Red Alterna — pedido por el cliente el 25 sept 2026 ("vista de
+ * árbol gráfico para Campaña de Lanzamiento"), con el mismo patrón
+ * visual que ya existe para la Red de Usuarios
+ * (`obtenerArbolPorNiveles` en redUsuarios.ts), cambiando 2 posiciones
+ * por fila por 8.
+ */
+export async function obtenerArbolAlternaPorNiveles(raizId: string, maxNiveles = 5) {
+  const raiz = await prisma.user.findUnique({
+    where: { id: raizId },
+    select: { id: true, nombre: true, apellido: true, status: true },
+  });
+  if (!raiz) return null;
+
+  const niveles: (NodoAlterna | null)[][] = [];
+  let actualIds: string[] = [raizId];
+
+  for (let n = 1; n <= maxNiveles; n++) {
+    const hijos = await prisma.user.findMany({
+      where: { padreAlternaId: { in: actualIds } },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        status: true,
+        padreAlternaId: true,
+        posicionEnPadreAlterna: true,
+      },
+    });
+
+    const fila: (NodoAlterna | null)[] = [];
+    const siguientesIds: string[] = [];
+    for (const padreId of actualIds) {
+      for (let pos = 1; pos <= 8; pos++) {
+        const hijo = hijos.find((h) => h.padreAlternaId === padreId && h.posicionEnPadreAlterna === pos);
+        fila.push(hijo ?? null);
+        if (hijo) siguientesIds.push(hijo.id);
+      }
+    }
+
+    if (fila.every((x) => x === null)) break;
+    niveles.push(fila);
+    actualIds = siguientesIds;
+    if (actualIds.length === 0) break;
+  }
+
+  return { raiz, niveles };
+}

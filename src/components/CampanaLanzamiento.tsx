@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Network, Rocket } from 'lucide-react';
+import { BarChart3, Network, Rocket } from 'lucide-react';
 import { useCountdown } from '@/lib/useCountdown';
+import ArbolGraficoAlterna from './ArbolGraficoAlterna';
 
 const CAMPANA_FIN_ISO = '2026-10-30T22:00:00-06:00';
 
@@ -27,6 +28,7 @@ const ESTADO_TEXTO: Record<DatosArbol['estado'], string> = {
 export default function CampanaLanzamiento() {
   const [datos, setDatos] = useState<DatosArbol | null>(null);
   const [error, setError] = useState('');
+  const [vista, setVista] = useState<'barras' | 'arbol'>('barras');
   const countdown = useCountdown(CAMPANA_FIN_ISO, '¡Campaña finalizada!');
 
   useEffect(() => {
@@ -85,32 +87,59 @@ export default function CampanaLanzamiento() {
             </div>
           )}
 
-          {/* Árbol de 5 niveles */}
-          <h2 className="text-[15px] font-semibold mb-3 flex items-center gap-2">
-            <Network size={16} className="text-cm-primary" />
-            Tu red por nivel
-          </h2>
-          <div className="flex flex-col gap-2 mb-8">
-            {datos.niveles.map((n) => {
-              const anchoMax = Math.max(...datos.niveles.map((x) => x.personas), 1);
-              const porcentaje = Math.max(6, Math.round((n.personas / anchoMax) * 100));
-              return (
-                <div key={n.nivel} className="flex items-center gap-3">
-                  <div className="w-16 shrink-0 text-[12px] font-bold text-[#6B7280]">
-                    Nivel {n.nivel}
-                  </div>
-                  <div className="flex-1 bg-[#F4F6FB] rounded-lg h-8 relative overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cm-primary to-cm-accent rounded-lg flex items-center justify-end pr-2"
-                      style={{ width: `${porcentaje}%` }}
-                    >
-                      <span className="text-white text-[11px] font-bold">{n.personas}</span>
+          {/* Árbol de 5 niveles — por barras (resumen) o gráfico (nodo por nodo) */}
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[15px] font-semibold flex items-center gap-2">
+              <Network size={16} className="text-cm-primary" />
+              Tu red por nivel
+            </h2>
+            <div className="flex items-center gap-1 bg-[#F4F6FB] rounded-lg p-1">
+              <button
+                onClick={() => setVista('barras')}
+                className={`flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-md ${
+                  vista === 'barras' ? 'bg-white shadow-sm text-cm-primary' : 'text-[#6B7280]'
+                }`}
+              >
+                <BarChart3 size={13} /> Resumen
+              </button>
+              <button
+                onClick={() => setVista('arbol')}
+                className={`flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-md ${
+                  vista === 'arbol' ? 'bg-white shadow-sm text-cm-primary' : 'text-[#6B7280]'
+                }`}
+              >
+                <Network size={13} /> Árbol
+              </button>
+            </div>
+          </div>
+
+          {vista === 'barras' ? (
+            <div className="flex flex-col gap-2 mb-8">
+              {datos.niveles.map((n) => {
+                const anchoMax = Math.max(...datos.niveles.map((x) => x.personas), 1);
+                const porcentaje = Math.max(6, Math.round((n.personas / anchoMax) * 100));
+                return (
+                  <div key={n.nivel} className="flex items-center gap-3">
+                    <div className="w-16 shrink-0 text-[12px] font-bold text-[#6B7280]">
+                      Nivel {n.nivel}
+                    </div>
+                    <div className="flex-1 bg-[#F4F6FB] rounded-lg h-8 relative overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cm-primary to-cm-accent rounded-lg flex items-center justify-end pr-2"
+                        style={{ width: `${porcentaje}%` }}
+                      >
+                        <span className="text-white text-[11px] font-bold">{n.personas}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mb-8">
+              <ArbolGraficoAlterna />
+            </div>
+          )}
 
           {/* Tabla de comisiones */}
           <h2 className="text-[15px] font-semibold mb-3">Comisión por nivel y tipo de membresía</h2>
