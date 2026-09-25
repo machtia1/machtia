@@ -198,6 +198,31 @@ enum MediaTipo {
 }
 
 // ============================================================
+// Publicidad — sección nueva pedida por el cliente el 25 sept 2026,
+// paralela a Anuncios: un carrusel de hasta 8 imágenes en formato
+// publicación de Facebook, listas para que cualquier usuario las
+// descargue y las use para promocionar el negocio en sus redes.
+// Editable desde Panel de Administrador → Publicidad.
+// ============================================================
+model PublicidadImagen {
+  id        String @id @default(cuid())
+  imagenUrl String
+
+  // Posición dentro del carrusel (0 = primera). Se usa para poder
+  // reordenar sin depender de la fecha de creación.
+  orden Int @default(0)
+
+  // Si está en false, deja de mostrarse/descargarse a los usuarios
+  // pero se conserva (no se borra) para poder reactivarla.
+  activo Boolean @default(true)
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([activo, orden])
+}
+
+// ============================================================
 // Notificaciones directas — botón 🔔 del Dashboard. Distintas de los
 // Anuncios: son mensajes cortos que el Administrador emite para
 // avisar algo puntual a todos los usuarios (pedido por el cliente el
