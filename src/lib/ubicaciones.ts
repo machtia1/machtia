@@ -74,3 +74,50 @@ export const ESTADOS_MEXICO: string[] = [
 export function ladaPorPais(nombrePais: string): string {
   return PAISES.find((p) => p.nombre === nombrePais)?.lada ?? '';
 }
+
+// Código ISO de 2 letras por país, usado para mostrar la banderita
+// junto a cada persona en "Mis Invitados" (pedido por el cliente el
+// 25 sept 2026). Se arma el emoji de bandera a partir del código
+// (ej. "MX" → 🇲🇽) en vez de usar imágenes, para que nunca truene
+// por una URL caída.
+const CODIGO_ISO_POR_PAIS: Record<string, string> = {
+  México: 'MX',
+  'Estados Unidos': 'US',
+  Canadá: 'CA',
+  Guatemala: 'GT',
+  Belice: 'BZ',
+  Honduras: 'HN',
+  'El Salvador': 'SV',
+  Nicaragua: 'NI',
+  'Costa Rica': 'CR',
+  Panamá: 'PA',
+  Colombia: 'CO',
+  Venezuela: 'VE',
+  Ecuador: 'EC',
+  Perú: 'PE',
+  Bolivia: 'BO',
+  Chile: 'CL',
+  Argentina: 'AR',
+  Uruguay: 'UY',
+  Paraguay: 'PY',
+  'República Dominicana': 'DO',
+  Cuba: 'CU',
+  'Puerto Rico': 'PR',
+  España: 'ES',
+  Brasil: 'BR',
+  Portugal: 'PT',
+  Francia: 'FR',
+};
+
+export function banderaPorPais(nombrePais?: string | null): string {
+  const codigo = nombrePais ? CODIGO_ISO_POR_PAIS[nombrePais] : undefined;
+  if (!codigo) return '🌐';
+  // Cada letra del código ISO se convierte en su "regional indicator
+  // symbol" — combinados, los navegadores los renderizan como la
+  // bandera del país.
+  return codigo
+    .toUpperCase()
+    .split('')
+    .map((letra) => String.fromCodePoint(127397 + letra.charCodeAt(0)))
+    .join('');
+}

@@ -35,8 +35,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'La imagen no debe pesar más de 5 MB' }, { status: 400 });
   }
 
+  // Nota (25 sept 2026): igual que en Anuncios, la carpeta se llama
+  // "uploads" y no "publicidad" a propósito — esa palabra es de las
+  // que más bloquean los ad-blockers, y justo es la misma falla que
+  // el cliente reportó con los anuncios.
   const extension = archivo.name.split('.').pop() || 'jpg';
-  const blob = await put(`publicidad/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`, archivo, {
+  const blob = await put(`uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`, archivo, {
     access: 'public',
   });
 

@@ -86,7 +86,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Mi Red',
     icon: Users,
     children: [
-      { label: 'Mis Referidos', href: '/home/red-usuarios', icon: UserPlus },
+      { label: 'Mis Referidos', href: '/home/mis-referidos', icon: UserPlus },
       { label: 'Mi Red 2x15', href: '/home/red-usuarios', icon: Network },
     ],
   },

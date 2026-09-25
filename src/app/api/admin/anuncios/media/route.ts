@@ -54,8 +54,16 @@ export async function POST(request: Request) {
     );
   }
 
+  // Nota (25 sept 2026): la carpeta se llama "uploads" a propósito,
+  // no "anuncios" — el cliente reportó que las imágenes no aparecen
+  // ni siquiera en su propia cuenta de Administrador, mientras que el
+  // texto del anuncio sí se ve. Eso apunta a que algún bloqueador de
+  // anuncios (uBlock, AdBlock, etc.) está interceptando la imagen,
+  // porque muchas listas de bloqueo (sobre todo las de sitios en
+  // español) bloquean cualquier URL que contenga la palabra
+  // "anuncio". Usar un nombre neutro evita ese choque.
   const extension = archivo.name.split('.').pop() || (mediaTipo === 'IMAGEN' ? 'jpg' : 'mp4');
-  const blob = await put(`anuncios/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`, archivo, {
+  const blob = await put(`uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`, archivo, {
     access: 'public',
   });
 
