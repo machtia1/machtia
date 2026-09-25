@@ -17,7 +17,8 @@
     "db:backfill-red-alterna": "node prisma/backfill-red-alterna.mjs",
     "db:reset-ganancias-red-alterna": "node prisma/reset-ganancias-red-alterna.mjs",
     "db:liberar-nivel-8": "node prisma/liberar-nivel-8.mjs",
-    "db:sincronizar-membresias-30-octubre": "node prisma/sincronizar-membresias-30-octubre.mjs"
+    "db:sincronizar-membresias-30-octubre": "node prisma/sincronizar-membresias-30-octubre.mjs",
+    "db:corregir-apellidos-duplicados": "node prisma/corregir-apellidos-duplicados.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",

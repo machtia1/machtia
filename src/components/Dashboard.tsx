@@ -111,6 +111,7 @@ interface SessionUser {
   correo: string;
   rol: 'ADMINISTRADOR' | 'PROFESOR_FACILITADOR' | 'SOCIO' | 'USUARIO' | 'ASISTENTE_ADMINISTRATIVO';
   linkInvitacion: string;
+  fotoPerfilUrl: string | null;
 }
 
 interface AnuncioDashboard {
@@ -225,6 +226,19 @@ export default function Dashboard() {
     if (abriendo && hayNoLeidas) {
       setHayNoLeidas(false);
       fetch('/api/notificaciones/marcar-vistas', { method: 'POST' }).catch(() => {});
+    }
+  }
+
+  async function borrarNotificacion(id: string) {
+    // Se quita de la lista al instante (no hace falta esperar la
+    // respuesta para que se sienta rápido); si falla, se recupera.
+    const anterior = notificaciones;
+    setNotificaciones((actual) => (actual ?? []).filter((n) => n.id !== id));
+    try {
+      const res = await fetch(`/api/notificaciones/${id}`, { method: 'DELETE' });
+      if (!res.ok) setNotificaciones(anterior);
+    } catch {
+      setNotificaciones(anterior);
     }
   }
 
@@ -432,11 +446,24 @@ export default function Dashboard() {
                     <p className="text-[13px] text-[#6B7280] px-2 py-3">No hay notificaciones todavía.</p>
                   )}
                   {(notificaciones ?? []).map((n) => (
-                    <div key={n.id} className="px-2 py-2.5 border-t border-[#E4E7EE] first:border-0">
-                      <div className="text-[13px] break-words">{n.mensaje}</div>
-                      <div className="text-[11px] text-[#6B7280] mt-0.5">
-                        {formatearFechaAnuncio(n.creadoEn)}
+                    <div
+                      key={n.id}
+                      className="group px-2 py-2.5 border-t border-[#E4E7EE] first:border-0 flex items-start gap-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] break-words">{n.mensaje}</div>
+                        <div className="text-[11px] text-[#6B7280] mt-0.5">
+                          {formatearFechaAnuncio(n.creadoEn)}
+                        </div>
                       </div>
+                      <button
+                        onClick={() => borrarNotificacion(n.id)}
+                        className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-[#9CA3AF] hover:bg-[#F4F6FB] hover:text-[#6B7280]"
+                        aria-label="Borrar notificación"
+                        title="Borrar notificación"
+                      >
+                        <X size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -446,9 +473,17 @@ export default function Dashboard() {
             <div className="relative">
               <button
                 onClick={() => setProfileOpen((v) => !v)}
-                className="w-9 h-9 rounded-full bg-cm-primary text-white font-bold text-[13px]"
+                className="w-9 h-9 rounded-full bg-cm-primary text-white font-bold text-[13px] overflow-hidden flex items-center justify-center shrink-0"
               >
-                {primeraLetra}
+                {user.fotoPerfilUrl ? (
+                  <img
+                    src={user.fotoPerfilUrl}
+                    alt="Foto de perfil"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  primeraLetra
+                )}
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-11 bg-white border border-[#E4E7EE] rounded-lg min-w-[200px] shadow-xl p-1.5">

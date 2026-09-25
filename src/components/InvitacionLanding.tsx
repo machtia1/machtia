@@ -76,7 +76,7 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
     setErrorEnvio('');
     const nombreOk = nombre.trim() && SOLO_LETRAS.test(nombre);
     const correoOk = correo.trim() && CORREO_VALIDO.test(correo);
-    if (!nombreOk) setErrorNombre('Escribe tu nombre y apellido (solo letras).');
+    if (!nombreOk) setErrorNombre('Escribe tu nombre (solo letras).');
     if (!correoOk) setErrorCorreo('Escribe un correo válido.');
     if (!nombreOk || !correoOk) return;
 
@@ -164,11 +164,11 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-[13px] text-white/70 mb-1.5">Nombre y Apellido</label>
+                  <label className="block text-[13px] text-white/70 mb-1.5">Nombre</label>
                   <input
                     value={nombre}
                     onChange={(e) => validarNombre(e.target.value)}
-                    placeholder="Ej. María López"
+                    placeholder="Ej. María"
                     className="w-full h-11 px-3 rounded-lg bg-white/[0.06] border border-white/15 text-white text-[14px] outline-none focus:border-cm-accent"
                   />
                   {errorNombre && <p className="text-red-400 text-[12px] mt-1">{errorNombre}</p>}

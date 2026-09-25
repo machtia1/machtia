@@ -113,6 +113,7 @@ model User {
   // Notificaciones personales (invitado directo nuevo, alguien se
   // unió a su Red 2x15) — ver NotificacionUsuario más abajo.
   notificacionesRecibidas NotificacionUsuario[]
+  notificacionesOcultas   NotificacionOculta[]
 
   // true si un Administrador la eliminó definitivamente de la Red de
   // Usuarios ("Eliminar definitivo + comprimir"). Conserva la cuenta
@@ -209,6 +210,8 @@ model Notificacion {
 
   creadoEn DateTime @default(now())
 
+  ocultaPara NotificacionOculta[]
+
   @@index([creadoEn])
 }
 
@@ -232,6 +235,26 @@ model NotificacionUsuario {
   creadoEn DateTime @default(now())
 
   @@index([destinatarioId, creadoEn])
+}
+
+// Un usuario puede "borrar" un aviso GENERAL del Administrador
+// (Notificacion) desde su campanita — pedido por el cliente el 25
+// sept 2026. Como ese aviso es compartido por todos, no se borra la
+// fila real (le seguiría apareciendo a los demás); en vez de eso se
+// guarda que ESTE usuario ya lo ocultó, y se filtra al armar su
+// lista en /api/notificaciones. Las notificaciones personales
+// (NotificacionUsuario) sí se borran de verdad — son de un solo
+// destinatario, ver /api/notificaciones/[id].
+model NotificacionOculta {
+  id             String       @id @default(cuid())
+  usuarioId      String
+  usuario        User         @relation(fields: [usuarioId], references: [id])
+  notificacionId String
+  notificacion   Notificacion @relation(fields: [notificacionId], references: [id])
+
+  ocultaEn DateTime @default(now())
+
+  @@unique([usuarioId, notificacionId])
 }
 
 // Preregistro (Fase 1): antes de que exista una cuenta real de User.

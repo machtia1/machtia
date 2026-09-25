@@ -24,6 +24,7 @@ export async function GET() {
       rol: true,
       status: true,
       linkInvitacion: true,
+      fotoPerfilUrl: true,
     },
   });
 

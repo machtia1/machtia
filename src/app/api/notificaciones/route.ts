@@ -19,6 +19,7 @@ export async function GET() {
 
   const [generales, personales, usuario] = await Promise.all([
     prisma.notificacion.findMany({
+      where: { ocultaPara: { none: { usuarioId: session.userId } } },
       orderBy: { creadoEn: 'desc' },
       take: 15,
       select: { id: true, mensaje: true, creadoEn: true },

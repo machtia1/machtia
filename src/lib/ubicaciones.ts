@@ -31,6 +31,9 @@ export const PAISES: Pais[] = [
   { nombre: 'Cuba', lada: '+53' },
   { nombre: 'Puerto Rico', lada: '+1' },
   { nombre: 'España', lada: '+34' },
+  { nombre: 'Brasil', lada: '+55' },
+  { nombre: 'Portugal', lada: '+351' },
+  { nombre: 'Francia', lada: '+33' },
 ];
 
 export const ESTADOS_MEXICO: string[] = [
