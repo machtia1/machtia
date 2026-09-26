@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import ChunkErrorGuard from '@/components/ChunkErrorGuard';
 
 export const metadata: Metadata = {
   title: 'Club Machtia',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <ChunkErrorGuard />
+        {children}
+      </body>
     </html>
   );
 }
