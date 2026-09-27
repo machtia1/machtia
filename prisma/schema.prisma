@@ -115,6 +115,9 @@ model User {
   notificacionesRecibidas NotificacionUsuario[]
   notificacionesOcultas   NotificacionOculta[]
 
+  // Cursos/Talleres — Elemento 4 (26 sept 2026)
+  inscripcionesCursos InscripcionCurso[]
+
   // true si un Administrador la eliminó definitivamente de la Red de
   // Usuarios ("Eliminar definitivo + comprimir"). Conserva la cuenta
   // y su historial, pero deja de contar como participante activo de
@@ -323,5 +326,186 @@ model RegaliaRedAlterna {
 
   @@index([beneficiarioId])
   @@index([origenId])
+}
+
+// ============================================================
+// Cursos y Talleres — "Elemento 4", pedido por el cliente el 26
+// sept 2026: interfaz y estructura completa (buscador, banner,
+// "sigue aprendiendo", filtros, carruseles, calendario de eventos,
+// instructores, rutas de aprendizaje) + reproducción/avance/
+// evaluación por lección + seguimiento básico de progreso.
+//
+// Alcance de esta primera entrega (documentado también en las
+// notas del proyecto): la analítica avanzada, la comunidad/foro y
+// el panel completo de gestión para Profesores Facilitadores
+// quedan para una siguiente ronda — son, en sí mismos, proyectos
+// grandes aparte.
+// ============================================================
+
+enum TipoCurso {
+  CURSO
+  TALLER
+}
+
+enum NivelDificultad {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+enum CategoriaCurso {
+  NEGOCIOS
+  FINANZAS
+  MARKETING
+  SALUD
+  IDIOMAS
+  HABILIDADES_DIGITALES
+}
+
+enum TipoLeccion {
+  VIDEO
+  LECTURA
+}
+
+model Instructor {
+  id           String  @id @default(cuid())
+  nombre       String
+  especialidad String
+  fotoUrl      String?
+
+  cursos Curso[]
+
+  creadoEn DateTime @default(now())
+
+  @@index([nombre])
+}
+
+model RutaAprendizaje {
+  id          String  @id @default(cuid())
+  titulo      String
+  descripcion String
+  nivel       NivelDificultad @default(BASICO)
+  color       String  @default("#2E3192") // acento visual de la tarjeta de la ruta
+
+  cursos Curso[]
+
+  creadoEn DateTime @default(now())
+}
+
+model Curso {
+  id                String          @id @default(cuid())
+  tipo              TipoCurso       @default(CURSO)
+  titulo            String
+  descripcionBreve  String
+  descripcionLarga  String?
+  portadaUrl        String?
+  categoria         CategoriaCurso
+  nivel             NivelDificultad @default(BASICO)
+
+  instructorId String?
+  instructor   Instructor? @relation(fields: [instructorId], references: [id])
+
+  rutaAprendizajeId String?
+  rutaAprendizaje   RutaAprendizaje? @relation(fields: [rutaAprendizajeId], references: [id])
+  ordenEnRuta       Int?
+
+  duracionMinutos Int @default(0)
+
+  calificacionPromedio Float @default(0)
+  numCalificaciones    Int   @default(0)
+
+  // Banderas que alimentan los carruseles pedidos ("Nuevos en
+  // Machtia", "Clases cortas para hoy", "Cursos especiales") — se
+  // marcan a mano desde el Panel de Administrador, no se calculan
+  // solas, para que el equipo de contenido decida qué destacar.
+  esNuevo    Boolean @default(false)
+  esEspecial Boolean @default(false)
+  esCorto    Boolean @default(false)
+
+  activo Boolean @default(true)
+
+  lecciones     Leccion[]
+  inscripciones InscripcionCurso[]
+  eventos       EventoCurso[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([tipo, activo])
+  @@index([categoria])
+  @@index([esNuevo])
+  @@index([esEspecial])
+  @@index([esCorto])
+}
+
+model Leccion {
+  id     String      @id @default(cuid())
+  cursoId String
+  curso   Curso       @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  titulo          String
+  orden           Int
+  tipoContenido   TipoLeccion
+  contenidoUrl    String? // video
+  contenidoTexto  String? // lectura
+  duracionMinutos Int     @default(5)
+
+  completadas LeccionCompletada[]
+
+  @@unique([cursoId, orden])
+}
+
+// Progreso de UN usuario en UN curso — pedido por el cliente el 26
+// sept 2026 ("sigue aprendiendo" con % de avance, seguimiento).
+model InscripcionCurso {
+  id     String @id @default(cuid())
+  cursoId String
+  curso   Curso  @relation(fields: [cursoId], references: [id])
+  usuarioId String
+  usuario   User @relation(fields: [usuarioId], references: [id])
+
+  progreso   Float   @default(0) // 0 a 100
+  completado Boolean @default(false)
+
+  // Nota de la evaluación simple al terminar el curso (ver
+  // src/lib/cursos.ts) — null hasta que la presente.
+  calificacionEvaluacion Int?
+
+  leccionesCompletadas LeccionCompletada[]
+
+  inscritoEn      DateTime @default(now())
+  ultimaActividad DateTime @updatedAt
+
+  @@unique([usuarioId, cursoId])
+  @@index([usuarioId])
+}
+
+model LeccionCompletada {
+  id             String            @id @default(cuid())
+  inscripcionId  String
+  inscripcion    InscripcionCurso  @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  leccionId      String
+  leccion        Leccion           @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+
+  completadaEn DateTime @default(now())
+
+  @@unique([inscripcionId, leccionId])
+}
+
+// Calendario de "próximos eventos relacionados a los cursos"
+// pedido por el cliente el 26 sept 2026.
+model EventoCurso {
+  id                String   @id @default(cuid())
+  titulo            String
+  instructorNombre  String
+  fechaHora         DateTime
+  linkAcceso        String?
+
+  cursoId String?
+  curso   Curso?  @relation(fields: [cursoId], references: [id])
+
+  creadoEn DateTime @default(now())
+
+  @@index([fechaHora])
 }
 
