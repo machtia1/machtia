@@ -20,7 +20,11 @@
     "db:sincronizar-membresias-30-octubre": "node prisma/sincronizar-membresias-30-octubre.mjs",
     "db:corregir-apellidos-duplicados": "node prisma/corregir-apellidos-duplicados.mjs",
     "db:corregir-casos-especiales-apellidos": "node prisma/corregir-casos-especiales-apellidos.mjs",
-    "db:seed-cursos": "node prisma/seed-cursos.mjs"
+    "db:seed-cursos": "node prisma/seed-cursos.mjs",
+    "db:verificar-restringidos-red-alterna": "node prisma/verificar-restringidos-red-alterna.mjs",
+    "db:verificar-invitados-sin-regalias": "node prisma/verificar-invitados-sin-regalias.mjs",
+    "db:verificar-estado-red-alterna": "node prisma/verificar-estado-red-alterna.mjs",
+    "db:regenerar-regalias-red-alterna": "node prisma/regenerar-regalias-red-alterna.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",
