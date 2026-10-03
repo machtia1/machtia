@@ -322,6 +322,13 @@ model RegaliaRedAlterna {
   monto          Decimal     @db.Decimal(10, 2)
   tablaAplicada  Suscripcion // BASICA | PLUS | NEGOCIOS — cuál tabla se usó para calcular el monto
 
+  // true = NO es una regalía real por invitación: es el pago de nivel 1
+  // simulado para personas en posiciones restringidas sin invitados
+  // propios (pedido del cliente el 2 oct 2026, para que puedan sumar
+  // durante la Red Alterna sin necesidad de invitar). En estos casos
+  // beneficiarioId === origenId (se paga a sí mismo, no hay invitado real).
+  simulada       Boolean     @default(false)
+
   creadoEn       DateTime    @default(now())
 
   @@index([beneficiarioId])
