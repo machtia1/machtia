@@ -37,7 +37,7 @@ const prisma = new PrismaClient();
 // ============================================================
 
 const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00';
-const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
+const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-11-30T22:00:00-06:00';
 
 const RANGO = { BASICA: 0, PLUS: 1, NEGOCIOS: 2 };
 const TABLAS = {

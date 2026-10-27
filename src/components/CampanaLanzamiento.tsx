@@ -6,7 +6,10 @@ import { BarChart3, Network, Rocket } from 'lucide-react';
 import { useCountdown } from '@/lib/useCountdown';
 import ArbolGraficoAlterna from './ArbolGraficoAlterna';
 
-const CAMPANA_FIN_ISO = '2026-10-30T22:00:00-06:00';
+// Ampliada por el cliente el 24-27 oct 2026: la campaña cierra el 30 de
+// noviembre a las 10:00 p.m. (antes: 30 de octubre). Debe coincidir con
+// RED_ALTERNA_FIN_ISO en src/lib/redAlterna.ts.
+const CAMPANA_FIN_ISO = '2026-11-30T22:00:00-06:00';
 
 interface NivelArbol {
   nivel: number;
@@ -70,7 +73,7 @@ export default function CampanaLanzamiento() {
               </div>
               <div className="text-[24px] font-bold text-cm-primaryDark">{countdown}</div>
             </div>
-            <div className="text-[12px] text-[#6B7280]">Cierra: 30 de octubre de 2026</div>
+            <div className="text-[12px] text-[#6B7280]">Cierra: 30 de noviembre de 2026</div>
           </div>
 
           {datos.estado === 'pendiente' && (

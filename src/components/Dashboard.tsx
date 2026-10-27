@@ -169,7 +169,7 @@ export default function Dashboard() {
   const [notificaciones, setNotificaciones] = useState<NotificacionDashboard[] | null>(null);
   const [notificacionesOpen, setNotificacionesOpen] = useState(false);
   const [hayNoLeidas, setHayNoLeidas] = useState(false);
-  const countdown = useCountdown('2026-10-30T22:00:00-06:00', '¡Campaña activa!');
+  const countdown = useCountdown('2026-11-30T22:00:00-06:00', '¡Campaña activa!');
 
   useEffect(() => {
     fetch('/api/auth/me')

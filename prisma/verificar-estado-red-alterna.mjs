@@ -24,14 +24,14 @@ async function main() {
   console.log('== Verificación: estado y configuración de fechas de la Red Alterna ==\n');
 
   const inicioISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00 (valor por defecto, no hay variable en .env)';
-  const finISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00 (valor por defecto, no hay variable en .env)';
+  const finISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-11-30T22:00:00-06:00 (valor por defecto, no hay variable en .env)';
 
   console.log(`RED_ALTERNA_INICIO_ISO: ${inicioISO}`);
   console.log(`RED_ALTERNA_FIN_ISO: ${finISO}`);
   console.log(`Fecha/hora actual del servidor (UTC): ${new Date().toISOString()}`);
 
   const inicioReal = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00';
-  const finReal = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
+  const finReal = process.env.RED_ALTERNA_FIN_ISO ?? '2026-11-30T22:00:00-06:00';
   console.log(`\nEstado calculado en este momento: ${estadoRedAlterna(inicioReal, finReal).toUpperCase()}`);
 
   console.log('\n---- Totales generales en toda la base de datos ----');

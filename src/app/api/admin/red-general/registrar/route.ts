@@ -41,8 +41,9 @@ export async function POST(request: Request) {
   // prisma/backfill-red-general.mjs) — se ACTUALIZA esa misma fila,
   // nunca se crea una nueva. No se le asigna contraseña aquí — queda
   // pendiente un flujo de "crear tu contraseña" (ver NOTAS_RED_USUARIOS.md).
-  // Misma regla del 30 de octubre que el resto de las membresías —
-  // confirmado por el cliente el 22 sept 2026 (ver src/lib/membresia.ts).
+  // Misma regla del 30 de noviembre que el resto de las membresías —
+  // regla del 22 sept 2026, actualizada el 27 oct 2026 (ver
+  // src/lib/membresia.ts).
   const expiraEnRestringido = proximoVencimientoMembresia();
 
   const nuevoUsuario = await prisma.user.update({

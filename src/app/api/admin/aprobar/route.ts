@@ -28,9 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este usuario ya fue procesado antes' }, { status: 409 });
   }
 
-  // Todas las membresías se sincronizan al calendario del 30 de
-  // octubre (confirmado por el cliente el 22 sept 2026) — ver
-  // src/lib/membresia.ts.
+  // Todas las membresías se sincronizan al mismo calendario fijo:
+  // 30 de noviembre, 10:00 p.m. (hora Centro de México) — regla del
+  // 22 sept 2026 actualizada el 27 oct 2026 al ampliarse la campaña;
+  // ver src/lib/membresia.ts.
   const expiraEn = proximoVencimientoMembresia();
 
   await prisma.user.update({

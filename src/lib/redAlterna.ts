@@ -53,6 +53,12 @@ import { prisma } from './prisma';
 //    movido a las 10:00 PM el mismo día) hora Centro de México
 //    (UTC-6). Corte: 30 de octubre 2026, 10:00 PM misma zona.
 //
+//    ⚠️ AMPLIACIÓN 27 oct 2026 — el cliente amplió la campaña con el
+//    mismo plan de ganancias: el corte pasa al 30 de NOVIEMBRE 2026,
+//    10:00 PM (hora Centro de México). La Red General (2x15) arranca
+//    el 1 de diciembre 2026. Las membresías empiezan su año de 365
+//    días a esa misma hora de cierre (ver src/lib/membresia.ts).
+//
 // Ver prisma/backfill-red-alterna.mjs para la reubicación de los
 // usuarios ya aprobados antes del 18 sept al nuevo árbol, y la
 // regeneración de sus regalías con la nueva lógica.
@@ -62,7 +68,7 @@ import { prisma } from './prisma';
 const RED_ALTERNA_INICIO_ISO = process.env.RED_ALTERNA_INICIO_ISO ?? '2026-09-16T22:00:00-06:00';
 
 /** Fecha y hora de CORTE de la Red Alterna (zona horaria de México, UTC-6). */
-const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-10-30T22:00:00-06:00';
+const RED_ALTERNA_FIN_ISO = process.env.RED_ALTERNA_FIN_ISO ?? '2026-11-30T22:00:00-06:00';
 
 /** Cuántas posiciones (ramas) tiene cada nodo del árbol de la Red Alterna. */
 const RAMAS_POR_NODO = 8;
