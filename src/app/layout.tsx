@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ChunkErrorGuard from '@/components/ChunkErrorGuard';
+import BloqueoTemporal from '@/components/BloqueoTemporal';
+
+// Bloqueo temporal de todo el sitio. Poner en false para quitarlo.
+const BLOQUEO_ACTIVO = true;
 
 export const metadata: Metadata = {
   title: 'Club Machtia',
@@ -15,8 +19,14 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <ChunkErrorGuard />
-        {children}
+        {BLOQUEO_ACTIVO ? (
+          <BloqueoTemporal />
+        ) : (
+          <>
+            <ChunkErrorGuard />
+            {children}
+          </>
+        )}
       </body>
     </html>
   );
