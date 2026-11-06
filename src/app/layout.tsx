@@ -4,7 +4,7 @@ import ChunkErrorGuard from '@/components/ChunkErrorGuard';
 import BloqueoTemporal from '@/components/BloqueoTemporal';
 
 // Bloqueo temporal de todo el sitio. true = bloqueado, false = normal.
-const BLOQUEO_ACTIVO = false;
+const BLOQUEO_ACTIVO = true;
 
 export const metadata: Metadata = {
   title: 'Club Machtia',
