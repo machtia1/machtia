@@ -7,8 +7,9 @@ export function valorACelda(v) {
   if (v instanceof Date) return v.toISOString();
   if (typeof v === 'bigint') return v.toString();
   if (typeof v === 'object') {
-    // Decimal de Prisma (tiene toFixed/toString) o JSON
-    if (typeof v.toFixed === 'function' && typeof v.toString === 'function' && v.constructor?.name === 'Decimal') {
+    // Decimal de Prisma (decimal.js): se reconoce porque tiene toFixed y
+    // se escribe como número plano, sin comillas (ej. 10 o 12.5).
+    if (typeof v.toFixed === 'function' && typeof v.toNumber === 'function') {
       return v.toString();
     }
     return JSON.stringify(v);
