@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { registrarRegaliasRedAlterna, insertarEnRedAlterna } from '@/lib/redAlterna';
+import {
+  registrarRegaliasRedAlterna,
+  insertarEnRedAlterna,
+  registrarPagoSimuladoRestringido,
+} from '@/lib/redAlterna';
 import { insertarEnRedUsuarios } from '@/lib/redUsuarios';
 import { crearNotificacionUsuario } from '@/lib/notificacionesUsuario';
 import { proximoVencimientoMembresia } from '@/lib/membresia';
@@ -81,6 +85,12 @@ export async function POST(request: Request) {
   // y si el usuario tiene una suscripción elegible — es segura de
   // llamar siempre, sin condiciones extra aquí.
   await registrarRegaliasRedAlterna(usuarioId);
+
+  // Si la persona ocupa un espacio restringido (se registró con el link
+  // de su espacio), recibe automáticamente el pago mínimo de la campaña
+  // ($10, nivel 1) — pedido del cliente el 10 nov 2026. Para quien no
+  // es restringido no hace nada.
+  await registrarPagoSimuladoRestringido(usuarioId);
 
   return NextResponse.json({ ok: true });
 }

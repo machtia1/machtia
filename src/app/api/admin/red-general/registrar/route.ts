@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { proximoVencimientoMembresia } from '@/lib/membresia';
+import { registrarPagoSimuladoRestringido } from '@/lib/redAlterna';
 
 export async function POST(request: Request) {
   const token = cookies().get('session')?.value;
@@ -65,6 +66,11 @@ export async function POST(request: Request) {
     where: { id: slotId },
     data: { status: 'OCUPADO', inviteLink: null },
   });
+
+  // Pago mínimo de la campaña ($10, nivel 1) de forma automática para
+  // quien ocupa un espacio restringido — pedido del cliente el 10 nov
+  // 2026. Ya revisa sola la campaña, duplicados y que sea restringido.
+  await registrarPagoSimuladoRestringido(nuevoUsuario.id);
 
   return NextResponse.json({ ok: true, usuario: nuevoUsuario });
 }

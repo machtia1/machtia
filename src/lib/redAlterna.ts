@@ -272,6 +272,79 @@ export async function registrarRegaliasRedAlterna(nuevoUsuarioId: string): Promi
   }
 }
 
+/**
+ * Pago mínimo de la campaña para personas en espacios restringidos:
+ * el nivel 1 de la tabla Básica ($10). Pedido por el cliente el
+ * 10 nov 2026: que cada persona nueva en un espacio restringido
+ * (niveles 1 a 6 de la Red General) reciba este pago de forma
+ * automática, sin tener que correr el script a mano.
+ */
+const MONTO_MINIMO_RESTRINGIDO = TABLAS.BASICA[1];
+
+/**
+ * Registra el pago SIMULADO de nivel 1 ($10, tabla Básica) para una
+ * persona que acaba de ocupar un espacio restringido. Es el mismo
+ * tipo de pago que genera prisma/simular-primer-invitado-restringidos.mjs
+ * (simulada=true, beneficiarioId === origenId, nivel 1), pero
+ * automático.
+ *
+ * Reglas (idénticas a las del script, para que ambos caminos sean
+ * equivalentes y nunca se dupliquen):
+ *   - Solo mientras la campaña esté activa.
+ *   - Solo si la persona está ACTIVA, ya no es "reservada" y es raíz
+ *     de su propia red (sin invitadoPorId).
+ *   - Solo si ocupa un espacio restringido (SlotRestringido).
+ *   - Si ya tiene invitados reales se omite (ya genera regalías normales).
+ *   - Si ya tiene un pago simulado se omite: un solo pago por persona.
+ *
+ * Es segura de llamar varias veces y NUNCA lanza error hacia afuera:
+ * un fallo aquí no debe impedir que se apruebe o registre a la
+ * persona (el script manual sigue disponible como respaldo).
+ */
+export async function registrarPagoSimuladoRestringido(usuarioId: string): Promise<boolean> {
+  try {
+    if (!redAlternaActiva()) return false;
+
+    const usuario = await prisma.user.findUnique({
+      where: { id: usuarioId },
+      select: { id: true, status: true, reservado: true, invitadoPorId: true },
+    });
+    if (!usuario || usuario.status !== 'ACTIVA' || usuario.reservado || usuario.invitadoPorId) {
+      return false;
+    }
+
+    const slot = await prisma.slotRestringido.findUnique({
+      where: { usuarioId },
+      select: { id: true },
+    });
+    if (!slot) return false; // No ocupa un espacio restringido.
+
+    const tieneInvitados = await prisma.user.count({ where: { invitadoPorId: usuarioId } });
+    if (tieneInvitados > 0) return false;
+
+    const yaSimulado = await prisma.regaliaRedAlterna.findFirst({
+      where: { beneficiarioId: usuarioId, simulada: true },
+      select: { id: true },
+    });
+    if (yaSimulado) return false;
+
+    await prisma.regaliaRedAlterna.create({
+      data: {
+        beneficiarioId: usuarioId,
+        origenId: usuarioId,
+        nivel: 1,
+        monto: MONTO_MINIMO_RESTRINGIDO,
+        tablaAplicada: 'BASICA',
+        simulada: true,
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error('No se pudo registrar el pago simulado del espacio restringido:', error);
+    return false;
+  }
+}
+
 /** Resumen de regalías ganadas por un usuario en la Red Alterna. */
 export async function resumenRegaliasUsuario(usuarioId: string) {
   const regalias = await prisma.regaliaRedAlterna.findMany({
