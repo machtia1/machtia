@@ -26,7 +26,9 @@
     "db:verificar-invitados-sin-regalias": "node prisma/verificar-invitados-sin-regalias.mjs",
     "db:verificar-estado-red-alterna": "node prisma/verificar-estado-red-alterna.mjs",
     "db:regenerar-regalias-red-alterna": "node prisma/regenerar-regalias-red-alterna.mjs",
-    "db:simular-primer-invitado-restringidos": "node prisma/simular-primer-invitado-restringidos.mjs"
+    "db:simular-primer-invitado-restringidos": "node prisma/simular-primer-invitado-restringidos.mjs",
+    "db:exportar-todo": "node prisma/exportar-base-completa.mjs",
+    "db:vaciar-usuarios-nivel-7": "node prisma/vaciar-usuarios-nivel-7-en-adelante.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",

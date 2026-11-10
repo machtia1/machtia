@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-const MAX_NIVEL = 8;
+const MAX_NIVEL = 6;
 
 async function asegurarSlotsCreados() {
   const existentes = await prisma.slotRestringido.count();

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import LoadingLogo from './LoadingLogo';
 import AdminTabs from './AdminTabs';
 
-const MAX_NIVEL_RESTRINGIDO = 8;
+const MAX_NIVEL_RESTRINGIDO = 6;
 
 interface SlotUsuario {
   id: string;

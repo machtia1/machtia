@@ -336,6 +336,64 @@ model RegaliaRedAlterna {
 }
 
 // ============================================================
+// Respaldos del vaciado del 9 nov 2026
+// ------------------------------------------------------------
+// El cliente pidió vaciar del nivel 7 en adelante (usuarios que
+// "se colaron"), conservando un punto de referencia del acumulado
+// de regalías por si alguien reclama lo que tenía. Estas tablas
+// guardan una COPIA de cada regalía y de cada usuario borrado, con
+// nombres y correos escritos tal cual (sin llaves foráneas), para
+// que sigan existiendo aunque las cuentas originales ya no. Ver
+// prisma/vaciar-usuarios-nivel-7-en-adelante.mjs.
+// ============================================================
+model RespaldoUsuarioBorrado {
+  id                 String    @id @default(cuid())
+  lote               String
+  usuarioIdOriginal  String
+  nombre             String
+  apellido           String
+  correo             String
+  telefono           String?
+  pais               String?
+  rol                String
+  suscripcion        String?
+  status             String
+  membresiaExpiraEn  DateTime?
+  comprobantePagoUrl String?
+  invitadoPorCorreo  String?
+  padreRedCorreo     String?
+  nivelRestringido   Int?
+  creadoEnOriginal   DateTime
+  totalGanado        Decimal   @default(0) @db.Decimal(10, 2)
+  totalGenerado      Decimal   @default(0) @db.Decimal(10, 2)
+  respaldadoEn       DateTime  @default(now())
+
+  @@index([lote])
+  @@index([correo])
+}
+
+model RespaldoRegaliaRedAlterna {
+  id                    String   @id @default(cuid())
+  lote                  String
+  regaliaIdOriginal     String
+  beneficiarioIdOriginal String
+  beneficiarioNombre    String
+  beneficiarioCorreo    String
+  origenIdOriginal      String
+  origenNombre          String
+  origenCorreo          String
+  nivel                 Int
+  monto                 Decimal  @db.Decimal(10, 2)
+  tablaAplicada         String
+  simulada              Boolean  @default(false)
+  creadoEnOriginal      DateTime
+  respaldadoEn          DateTime @default(now())
+
+  @@index([lote])
+  @@index([beneficiarioCorreo])
+}
+
+// ============================================================
 // Cursos y Talleres — "Elemento 4", pedido por el cliente el 26
 // sept 2026: interfaz y estructura completa (buscador, banner,
 // "sigue aprendiendo", filtros, carruseles, calendario de eventos,
