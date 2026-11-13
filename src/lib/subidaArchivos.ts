@@ -220,3 +220,190 @@ export function mensajeErrorRed(): string {
   }
   return 'No se pudo enviar la información. Revisa tu conexión e intenta de nuevo.';
 }
+
+/** Texto corto con el error técnico, para mostrarlo en letra chica y poder diagnosticar. */
+export function detalleTecnico(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`.slice(0, 160);
+  return String(error).slice(0, 160);
+}
+
+// ------------------------------------------------------------
+// Copia del archivo a la memoria
+// ------------------------------------------------------------
+// Cuando la persona elige una foto desde su galería, la nube o una
+// app de mensajes, el celular entrega una "referencia" al archivo, no
+// el archivo mismo. Si esa referencia cambia o se vuelve ilegible
+// entre que se elige y que se envía (pasa con archivos de la nube o
+// sin extensión, por ejemplo "Foto de Felipe"), Chrome corta el envío
+// antes de que salga, y aparece un error de conexión aunque el
+// internet esté bien. Por eso, al elegir el archivo lo leemos de una
+// vez y trabajamos con una copia en memoria.
+// ------------------------------------------------------------
+
+const EXTENSION_POR_TIPO: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/heic': 'heic',
+  'application/pdf': 'pdf',
+};
+
+/** Reconoce el tipo real del archivo por sus primeros bytes (no confía en el nombre). */
+export function detectarTipo(inicio: Uint8Array): string | null {
+  const b = inicio;
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b.length >= 4 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return 'application/pdf';
+  if (b.length >= 4 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif';
+  if (
+    b.length >= 12 &&
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+  if (b.length >= 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    return 'image/heic'; // HEIC/HEIF/AVIF comparten esta marca "ftyp"
+  }
+  return null;
+}
+
+/** Asegura que el nombre termine con la extensión que corresponde al tipo. */
+function nombreConExtension(nombre: string, tipo: string): string {
+  const ext = EXTENSION_POR_TIPO[tipo];
+  const limpio = nombre.trim() || 'comprobante';
+  if (!ext) return limpio;
+  if (new RegExp(`\\.${ext}$`, 'i').test(limpio)) return limpio;
+  if (ext === 'jpg' && /\.jpe?g$/i.test(limpio)) return limpio;
+  return /\.[A-Za-z0-9]{2,5}$/.test(limpio) ? limpio : `${limpio}.${ext}`;
+}
+
+function leerBytes(archivo: Blob): Promise<ArrayBuffer> {
+  if (typeof archivo.arrayBuffer === 'function') return archivo.arrayBuffer();
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => resolve(lector.result as ArrayBuffer);
+    lector.onerror = () => reject(lector.error ?? new Error('No se pudo leer el archivo'));
+    lector.readAsArrayBuffer(archivo);
+  });
+}
+
+/**
+ * Lee el archivo completo y devuelve una copia en memoria, con el tipo
+ * detectado por su contenido y el nombre con su extensión correcta.
+ * Lanza un Error con mensaje listo para mostrar si no se puede leer.
+ */
+export async function copiarEnMemoria(archivo: File): Promise<File> {
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await leerBytes(archivo);
+  } catch {
+    throw new Error(
+      'No pudimos leer este archivo. Elígelo de nuevo, o toma una captura de pantalla de la foto y sube esa captura.'
+    );
+  }
+  if (bytes.byteLength === 0) {
+    throw new Error('El archivo está vacío. Elige otro o toma una captura de pantalla de la foto.');
+  }
+
+  const tipo =
+    detectarTipo(new Uint8Array(bytes.slice(0, 16))) || archivo.type || 'application/octet-stream';
+  return new File([bytes], nombreConExtension(archivo.name, tipo), {
+    type: tipo,
+    lastModified: Date.now(),
+  });
+}
+
+/** Contenido del archivo en base64 (sin el encabezado "data:..."). */
+export function archivoABase64(archivo: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => {
+      const texto = String(lector.result ?? '');
+      resolve(texto.slice(texto.indexOf(',') + 1));
+    };
+    lector.onerror = () => reject(lector.error ?? new Error('No se pudo leer el archivo'));
+    lector.readAsDataURL(archivo);
+  });
+}
+
+// ------------------------------------------------------------
+// Envío del registro con reintentos y camino de respaldo
+// ------------------------------------------------------------
+
+/** Tope para el envío de respaldo (base64 pesa ~33 % más y Vercel limita a 4.5 MB). */
+const LIMITE_RESPALDO_BYTES = 2.5 * 1024 * 1024;
+
+export interface ResultadoEnvio {
+  ok: boolean;
+  error?: string;
+  /** Detalle técnico del último fallo de red, para mostrarlo en letra chica. */
+  detalle?: string;
+}
+
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Envía el registro a /api/registro. Si el envío se corta antes de
+ * llegar al servidor (error de red), reintenta una vez igual y, de
+ * último, lo manda por un camino distinto (JSON con el archivo en
+ * base64, sin formulario multipart), que sortea los fallos propios
+ * del envío de archivos en algunos celulares y redes.
+ *
+ * Solo se reintenta cuando el envío NO obtuvo respuesta. Si la primera
+ * vez sí llegó pero la respuesta se perdió, el reintento recibirá
+ * "ya existe una cuenta con este correo": en ese caso (y solo en ese)
+ * se toma como registro exitoso.
+ */
+export async function enviarRegistroComprobante(
+  campos: Record<string, string>,
+  archivo: File,
+  enviar: typeof fetch = (...args) => fetch(...args),
+  pausaMs = 700
+): Promise<ResultadoEnvio> {
+  const modos: Array<'multipart' | 'multipart' | 'json'> = ['multipart', 'multipart', 'json'];
+  let huboFalloDeRed = false;
+  let detalle = '';
+
+  for (let i = 0; i < modos.length; i++) {
+    const modo = modos[i];
+    if (modo === 'json' && archivo.size > LIMITE_RESPALDO_BYTES) break;
+
+    try {
+      if (i > 0) await esperar(pausaMs * i);
+
+      let res: Response;
+      if (modo === 'multipart') {
+        const formData = new FormData();
+        for (const [clave, valor] of Object.entries(campos)) formData.append(clave, valor);
+        formData.append('comprobante', archivo);
+        res = await enviar('/api/registro', { method: 'POST', body: formData });
+      } else {
+        const comprobanteBase64 = await archivoABase64(archivo);
+        res = await enviar('/api/registro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...campos,
+            comprobanteNombre: archivo.name,
+            comprobanteTipo: archivo.type,
+            comprobanteBase64,
+          }),
+        });
+      }
+
+      const { ok, error } = await leerRespuestaApi(res);
+      if (ok) return { ok: true };
+      if (huboFalloDeRed && res.status === 409 && error?.includes('Ya existe una cuenta con este correo')) {
+        return { ok: true }; // El primer envío sí había llegado; solo se perdió la respuesta.
+      }
+      return { ok: false, error };
+    } catch (err) {
+      huboFalloDeRed = true;
+      detalle = detalleTecnico(err);
+    }
+  }
+
+  return { ok: false, error: mensajeErrorRed(), detalle };
+}

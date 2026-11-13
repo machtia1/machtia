@@ -7,6 +7,7 @@ import LoadingLogo from './LoadingLogo';
 import {
   LIMITE_SUBIDA_BYTES,
   comprimirImagen,
+  copiarEnMemoria,
   leerRespuestaApi,
   mensajeErrorRed,
 } from '@/lib/subidaArchivos';
@@ -97,7 +98,8 @@ export default function MiSuscripcion() {
     try {
       // La foto se reduce sola en el celular antes de enviarse (las fotos
       // de cámara suelen pasar de 4 MB y Vercel las rechaza).
-      const { archivo: foto } = await comprimirImagen(archivo, { ladoMaximo: 1024, objetivoBytes: 800 * 1024 });
+      const copia = await copiarEnMemoria(archivo);
+      const { archivo: foto } = await comprimirImagen(copia, { ladoMaximo: 1024, objetivoBytes: 800 * 1024 });
       if (foto.size > LIMITE_SUBIDA_BYTES) {
         setError('La imagen pesa demasiado, elige una más pequeña.');
         return;

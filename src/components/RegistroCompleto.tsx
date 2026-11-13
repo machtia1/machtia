@@ -7,10 +7,10 @@ import LoadingLogo from './LoadingLogo';
 import {
   LIMITE_SUBIDA_BYTES,
   comprimirImagen,
+  copiarEnMemoria,
+  enviarRegistroComprobante,
   esImagen,
   formatearTamano,
-  leerRespuestaApi,
-  mensajeErrorRed,
 } from '@/lib/subidaArchivos';
 
 interface DatosPreregistro {
@@ -54,6 +54,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [detalleError, setDetalleError] = useState('');
   const [completado, setCompletado] = useState(false);
 
   const ladaPais = ladaPorPais(pais);
@@ -80,15 +81,21 @@ export default function RegistroCompleto({ token }: { token: string }) {
   // con un mensaje claro, en vez de fallar al enviar.
   async function elegirComprobante(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target;
-    const original = input.files?.[0] ?? null;
+    const elegido = input.files?.[0] ?? null;
 
     setError('');
+    setDetalleError('');
     setInfoArchivo('');
     setComprobante(null);
-    if (!original) return;
+    if (!elegido) return;
 
     setProcesandoArchivo(true);
     try {
+      // Primero se lee el archivo completo y se trabaja con una copia en
+      // memoria: así el envío no depende de dónde esté guardado en el
+      // celular (galería, nube, app de mensajes).
+      const original = await copiarEnMemoria(elegido);
+
       if (!esImagen(original)) {
         if (original.size > LIMITE_SUBIDA_BYTES) {
           throw new Error(
@@ -127,6 +134,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setDetalleError('');
 
     if (!apellido.trim()) return setError('Escribe tu apellido');
     if (!estadoProvincia.trim()) return setError('Escribe tu estado o provincia');
@@ -142,29 +150,30 @@ export default function RegistroCompleto({ token }: { token: string }) {
 
     setEnviando(true);
     try {
-      const formData = new FormData();
-      formData.append('token', token);
-      formData.append('apellido', apellido.trim());
-      formData.append('pais', pais);
-      formData.append('ladaPais', ladaPais);
-      formData.append('telefono', telefono.trim());
-      formData.append('estadoProvincia', estadoProvincia.trim());
-      formData.append('ciudad', ciudad.trim());
-      formData.append('suscripcion', suscripcion);
-      formData.append('password', password);
-      formData.append('comprobante', comprobante);
+      // Reintenta solo si el envío se corta antes de llegar al servidor, y
+      // como último recurso usa un camino distinto (ver subidaArchivos.ts).
+      const resultado = await enviarRegistroComprobante(
+        {
+          token,
+          apellido: apellido.trim(),
+          pais,
+          ladaPais,
+          telefono: telefono.trim(),
+          estadoProvincia: estadoProvincia.trim(),
+          ciudad: ciudad.trim(),
+          suscripcion,
+          password,
+        },
+        comprobante
+      );
 
-      const res = await fetch('/api/registro', { method: 'POST', body: formData });
-      const { ok, error: errorServidor } = await leerRespuestaApi(res);
-
-      if (!ok) {
-        setError(errorServidor || 'No se pudo completar el registro');
+      if (!resultado.ok) {
+        setError(resultado.error || 'No se pudo completar el registro');
+        setDetalleError(resultado.detalle ?? '');
         return;
       }
 
       setCompletado(true);
-    } catch {
-      setError(mensajeErrorRed());
     } finally {
       setEnviando(false);
     }
@@ -378,7 +387,16 @@ export default function RegistroCompleto({ token }: { token: string }) {
             )}
           </div>
 
-          {error && <p className="text-red-400 text-[13px]">{error}</p>}
+          {error && (
+            <div>
+              <p className="text-red-400 text-[13px]">{error}</p>
+              {detalleError && (
+                <p className="text-white/35 text-[10.5px] mt-1 break-words">
+                  Detalle técnico: {detalleError}
+                </p>
+              )}
+            </div>
+          )}
 
           <button
             type="submit"
