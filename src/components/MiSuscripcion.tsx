@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Camera, Check, Copy } from 'lucide-react';
 import LoadingLogo from './LoadingLogo';
+import {
+  LIMITE_SUBIDA_BYTES,
+  comprimirImagen,
+  leerRespuestaApi,
+  mensajeErrorRed,
+} from '@/lib/subidaArchivos';
 
 interface Perfil {
   nombre: string;
@@ -89,17 +95,25 @@ export default function MiSuscripcion() {
     setSubiendoFoto(true);
     setError('');
     try {
+      // La foto se reduce sola en el celular antes de enviarse (las fotos
+      // de cámara suelen pasar de 4 MB y Vercel las rechaza).
+      const { archivo: foto } = await comprimirImagen(archivo, { ladoMaximo: 1024, objetivoBytes: 800 * 1024 });
+      if (foto.size > LIMITE_SUBIDA_BYTES) {
+        setError('La imagen pesa demasiado, elige una más pequeña.');
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('foto', archivo);
+      formData.append('foto', foto);
       const res = await fetch('/api/perfil/foto', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'No se pudo subir la foto');
+      const { ok, data, error: errorServidor } = await leerRespuestaApi(res);
+      if (!ok || !data?.usuario) {
+        setError(errorServidor || 'No se pudo subir la foto');
         return;
       }
       setPerfil((p) => (p ? { ...p, fotoPerfilUrl: data.usuario.fotoPerfilUrl } : p));
-    } catch {
-      setError('Error de conexión');
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : mensajeErrorRed());
     } finally {
       setSubiendoFoto(false);
     }

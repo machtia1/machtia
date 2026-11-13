@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PAISES, ESTADOS_MEXICO, ladaPorPais } from '@/lib/ubicaciones';
 import LoadingLogo from './LoadingLogo';
+import {
+  LIMITE_SUBIDA_BYTES,
+  comprimirImagen,
+  esImagen,
+  formatearTamano,
+  leerRespuestaApi,
+  mensajeErrorRed,
+} from '@/lib/subidaArchivos';
 
 interface DatosPreregistro {
   nombre: string;
@@ -41,6 +49,8 @@ export default function RegistroCompleto({ token }: { token: string }) {
   const [password, setPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [comprobante, setComprobante] = useState<File | null>(null);
+  const [procesandoArchivo, setProcesandoArchivo] = useState(false);
+  const [infoArchivo, setInfoArchivo] = useState('');
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +74,56 @@ export default function RegistroCompleto({ token }: { token: string }) {
       .finally(() => setCargando(false));
   }, [token]);
 
+  // Al elegir el comprobante: si es una foto pesada se reduce sola en el
+  // celular (ver src/lib/subidaArchivos.ts); si es PDF o ya es ligera, se
+  // envía tal cual. Cualquier archivo que no quepa se rechaza aquí mismo,
+  // con un mensaje claro, en vez de fallar al enviar.
+  async function elegirComprobante(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const original = input.files?.[0] ?? null;
+
+    setError('');
+    setInfoArchivo('');
+    setComprobante(null);
+    if (!original) return;
+
+    setProcesandoArchivo(true);
+    try {
+      if (!esImagen(original)) {
+        if (original.size > LIMITE_SUBIDA_BYTES) {
+          throw new Error(
+            `El archivo pesa ${formatearTamano(original.size)} y el máximo es ${formatearTamano(
+              LIMITE_SUBIDA_BYTES
+            )}. Elige uno más pequeño o sube una captura de pantalla del comprobante.`
+          );
+        }
+        setComprobante(original);
+        setInfoArchivo(`${original.name} · ${formatearTamano(original.size)}`);
+        return;
+      }
+
+      const { archivo, comprimido, pesoOriginal } = await comprimirImagen(original);
+      if (archivo.size > LIMITE_SUBIDA_BYTES) {
+        throw new Error('La imagen pesa demasiado, elige una más pequeña.');
+      }
+      setComprobante(archivo);
+      setInfoArchivo(
+        comprimido
+          ? `${archivo.name} · reducida de ${formatearTamano(pesoOriginal)} a ${formatearTamano(archivo.size)}`
+          : `${archivo.name} · ${formatearTamano(archivo.size)}`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'No se pudo preparar el archivo. Elige otra imagen.'
+      );
+      input.value = ''; // permite volver a elegir el mismo archivo u otro
+    } finally {
+      setProcesandoArchivo(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -74,7 +134,11 @@ export default function RegistroCompleto({ token }: { token: string }) {
     if (!telefono.trim()) return setError('Escribe tu teléfono');
     if (password.length < 8) return setError('La contraseña debe tener al menos 8 caracteres');
     if (password !== confirmarPassword) return setError('Las contraseñas no coinciden');
+    if (procesandoArchivo) return setError('Espera un momento, estamos preparando tu imagen.');
     if (!comprobante) return setError('Sube tu comprobante de pago');
+    if (comprobante.size > LIMITE_SUBIDA_BYTES) {
+      return setError('El comprobante pesa demasiado, elige una imagen más pequeña.');
+    }
 
     setEnviando(true);
     try {
@@ -91,16 +155,16 @@ export default function RegistroCompleto({ token }: { token: string }) {
       formData.append('comprobante', comprobante);
 
       const res = await fetch('/api/registro', { method: 'POST', body: formData });
-      const data = await res.json();
+      const { ok, error: errorServidor } = await leerRespuestaApi(res);
 
-      if (!res.ok) {
-        setError(data.error || 'No se pudo completar el registro');
+      if (!ok) {
+        setError(errorServidor || 'No se pudo completar el registro');
         return;
       }
 
       setCompletado(true);
     } catch {
-      setError('Error de conexión, intenta de nuevo');
+      setError(mensajeErrorRed());
     } finally {
       setEnviando(false);
     }
@@ -298,20 +362,30 @@ export default function RegistroCompleto({ token }: { token: string }) {
             <input
               type="file"
               accept="image/*,application/pdf"
-              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
+              onChange={elegirComprobante}
+              disabled={procesandoArchivo || enviando}
               className="w-full text-[13px] text-white/70 file:mr-3 file:h-9 file:px-4 file:rounded-lg file:border-0 file:bg-gradient-to-br file:from-[#38bdf8] file:to-[#6366f1] file:text-white file:text-[13px] file:font-semibold"
             />
-            <p className="text-white/40 text-[11px] mt-1">Imagen o PDF, máximo 4 MB.</p>
+            <p className="text-white/40 text-[11px] mt-1">
+              Imagen o PDF, máximo 4 MB. Si es una foto, la reducimos sola para que se envíe sin
+              problema.
+            </p>
+            {procesandoArchivo && (
+              <p className="text-[#7dd3fc] text-[12px] mt-1.5">Preparando tu imagen...</p>
+            )}
+            {!procesandoArchivo && infoArchivo && (
+              <p className="text-emerald-300 text-[12px] mt-1.5 break-words">✓ {infoArchivo}</p>
+            )}
           </div>
 
           {error && <p className="text-red-400 text-[13px]">{error}</p>}
 
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || procesandoArchivo}
             className="h-12 rounded-2xl bg-gradient-to-br from-[#38bdf8] to-[#6366f1] text-white text-[14.5px] font-bold mt-2 shadow-[0_8px_22px_rgba(56,189,248,0.3)] disabled:opacity-60"
           >
-            {enviando ? 'Enviando...' : 'Completar registro'}
+            {enviando ? 'Enviando...' : procesandoArchivo ? 'Preparando imagen...' : 'Completar registro'}
           </button>
         </form>
         </div>

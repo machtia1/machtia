@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sube tu comprobante de pago' }, { status: 400 });
     }
     if (comprobante.size > TAMANO_MAX_COMPROBANTE) {
-      return NextResponse.json({ error: 'El comprobante no debe pesar más de 5 MB' }, { status: 400 });
+      return NextResponse.json({ error: 'El comprobante no debe pesar más de 4 MB' }, { status: 400 });
     }
 
     const preregistro = await prisma.preregistro.findUnique({ where: { tokenConfirmacion: token } });
