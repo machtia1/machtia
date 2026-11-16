@@ -1,7 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import CuentaRegresiva from '@/components/landing/CuentaRegresiva';
+import ReproductorVideo from '@/components/landing/ReproductorVideo';
+import AsistentePreguntas from '@/components/landing/AsistentePreguntas';
+import {
+  POSTER_BIENVENIDA,
+  POSTER_PRESENTACION,
+  VIDEO_BIENVENIDA,
+  VIDEO_PRESENTACION,
+} from '@/lib/landingConfig';
 
 const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$/;
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,12 +20,24 @@ interface Props {
   invitadorNombre: string;
 }
 
-export default function InvitacionLanding({ invitadorLinkId, slotToken, invitadorNombre }: Props) {
-  const router = useRouter();
+function desplazarA(elemento: HTMLElement | null) {
+  if (!elemento) return;
+  const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  elemento.scrollIntoView({ behavior: sinMovimiento ? 'auto' : 'smooth', block: 'start' });
+}
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoDisponible, setVideoDisponible] = useState(true);
-  const [reproduciendo, setReproduciendo] = useState(false);
+export default function InvitacionLanding({ invitadorLinkId, slotToken, invitadorNombre }: Props) {
+  // Pasos de la página: 1 = primer video · 2 = video de presentación · 3 = preguntas y asesor.
+  // El formulario de preregistro siempre está disponible al final.
+  const [paso, setPaso] = useState<1 | 2 | 3>(1);
+  const [sonido, setSonido] = useState(false);
+  const [video1NoDisponible, setVideo1NoDisponible] = useState(false);
+  const [formularioVisible, setFormularioVisible] = useState(false);
+
+  const presentacionRef = useRef<HTMLElement>(null);
+  const asistenteRef = useRef<HTMLDivElement>(null);
+  const formularioRef = useRef<HTMLDivElement>(null);
+  const nombreRef = useRef<HTMLInputElement>(null);
 
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
@@ -28,29 +48,40 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
   const [enviado, setEnviado] = useState(false);
   const [linkDesarrollo, setLinkDesarrollo] = useState<string | undefined>();
 
-  useEffect(() => {
-    if (!videoRef.current) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && videoRef.current) {
-          videoRef.current.play().then(() => setReproduciendo(true)).catch(() => {});
-        }
-      },
-      { threshold: 0.5 }
-    );
-    obs.observe(videoRef.current);
-    return () => obs.disconnect();
-  }, []);
+  // Las invitaciones de espacios restringidos no vienen de una persona.
+  const invitadorParaAsesor = slotToken ? undefined : invitadorNombre;
 
-  function toggleVideo() {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setReproduciendo(true);
-    } else {
-      videoRef.current.pause();
-      setReproduciendo(false);
-    }
+  // Al avanzar de paso, la pantalla baja sola a la sección nueva.
+  useEffect(() => {
+    if (paso === 2) desplazarA(presentacionRef.current);
+    if (paso === 3) desplazarA(asistenteRef.current);
+  }, [paso]);
+
+  // El botón fijo "Iniciar registro" se oculta cuando el formulario ya está a la vista.
+  useEffect(() => {
+    const formulario = formularioRef.current;
+    if (!formulario) return;
+    const observador = new IntersectionObserver(([entrada]) => setFormularioVisible(entrada.isIntersecting), {
+      threshold: 0.25,
+    });
+    observador.observe(formulario);
+    return () => observador.disconnect();
+  }, [enviado]);
+
+  const alCambiarSonido = useCallback((activo: boolean) => setSonido(activo), []);
+
+  function conocerMas() {
+    setSonido(true); // la persona acaba de tocar: se intenta con sonido
+    if (paso >= 2) desplazarA(presentacionRef.current);
+    else setPaso(2);
+  }
+
+  const alTerminarPresentacion = useCallback(() => setPaso((p) => (p < 3 ? 3 : p)), []);
+
+  function iniciarRegistro() {
+    desplazarA(formularioRef.current);
+    // Se espera a que termine el desplazamiento para no mover la pantalla dos veces.
+    setTimeout(() => nombreRef.current?.focus({ preventScroll: true }), 500);
   }
 
   function validarNombre(valor: string) {
@@ -101,6 +132,9 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
     }
   }
 
+  const botonPrincipal =
+    'w-full h-12 rounded-2xl bg-gradient-to-br from-[#38bdf8] to-[#6366f1] text-white text-[14.5px] font-bold shadow-[0_8px_22px_rgba(56,189,248,0.3)]';
+
   return (
     <div className="relative min-h-svh bg-[radial-gradient(ellipse_90%_60%_at_50%_0%,_#0f1a3d_0%,_#0a0e27_45%,_#060915_100%)] text-white overflow-x-hidden">
       <div
@@ -112,9 +146,9 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
         }}
       />
 
-      <div className="relative max-w-xl mx-auto px-6 py-14 sm:py-20">
+      <div className="relative max-w-xl mx-auto px-6 pt-14 sm:pt-20 pb-32">
         <div className="flex items-center gap-2.5 mb-10">
-          <img src="/brand/logo-lockup-white.png" alt="Club Machtia" className="h-7 w-auto" />
+          <img src="/brand/logo-lockup-white.png" alt="Machtia" className="h-7 w-auto" />
         </div>
 
         {!enviado ? (
@@ -131,44 +165,72 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
               ¿Estás listo?
             </p>
 
-            <div
-              onClick={toggleVideo}
-              className="relative rounded-2xl overflow-hidden bg-black/40 border border-white/10 mb-6 cursor-pointer aspect-video"
-            >
-              {videoDisponible ? (
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  src="/videos/presentacion.mp4"
-                  playsInline
-                  muted
-                  loop
-                  onError={() => setVideoDisponible(false)}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/40 text-[13px]">
-                  Video de presentación próximamente
-                </div>
-              )}
-              {!reproduciendo && videoDisponible && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
-                      <path d="M5 3l12 7-12 7V3z" />
-                    </svg>
-                  </div>
-                </div>
+            <CuentaRegresiva />
+
+            {/* Paso 1: primer video. Arranca solo, sin sonido; no se puede adelantar. */}
+            <div className="mb-6">
+              <ReproductorVideo
+                src={VIDEO_BIENVENIDA}
+                poster={POSTER_BIENVENIDA}
+                titulo="Video de bienvenida"
+                modo="estricto"
+                inicioAutomatico
+                sonido={sonido}
+                onSonidoChange={alCambiarSonido}
+                onNoDisponible={() => setVideo1NoDisponible(true)}
+                alTerminar={(repetir) => (
+                  <>
+                    <p className="text-[15px] font-semibold text-center mb-1">¿Quieres conocer más?</p>
+                    <button type="button" onClick={conocerMas} className={`${botonPrincipal} max-w-[320px]`}>
+                      Sí, quiero conocer más
+                    </button>
+                    <button
+                      type="button"
+                      onClick={repetir}
+                      className="w-full max-w-[320px] h-11 rounded-xl border border-white/25 text-[14px] font-medium hover:bg-white/5 transition-colors"
+                    >
+                      Repetir video
+                    </button>
+                  </>
+                )}
+              />
+              {video1NoDisponible && paso === 1 && (
+                <button type="button" onClick={conocerMas} className={`${botonPrincipal} mt-4`}>
+                  Sí, quiero conocer más
+                </button>
               )}
             </div>
 
-            <button
-              onClick={() => router.push('/')}
-              className="w-full h-11 rounded-xl border border-white/25 text-[14px] font-medium mb-10 hover:bg-white/5 transition-colors"
-            >
-              Conoce más en nuestro sitio
-            </button>
+            {/* Paso 2: video de presentación. */}
+            {paso >= 2 && (
+              <section ref={presentacionRef} aria-label="Presentación" className="mb-6 scroll-mt-6">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#7dd3fc] mb-2">Presentación</p>
+                <ReproductorVideo
+                  src={VIDEO_PRESENTACION}
+                  poster={POSTER_PRESENTACION}
+                  titulo="Video de presentación"
+                  modo="libre"
+                  inicioAutomatico
+                  sonido={sonido}
+                  onSonidoChange={alCambiarSonido}
+                  onTerminar={alTerminarPresentacion}
+                  onNoDisponible={alTerminarPresentacion}
+                />
+              </section>
+            )}
 
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-[rgba(15,23,55,0.92)] to-[rgba(8,12,30,0.97)] backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.5)] p-6">
+            {/* Paso 3: preguntas frecuentes y asesor por WhatsApp. */}
+            {paso >= 3 && (
+              <div ref={asistenteRef} className="mb-10 scroll-mt-6">
+                <AsistentePreguntas invitador={invitadorParaAsesor} />
+              </div>
+            )}
+
+            <div
+              id="registro"
+              ref={formularioRef}
+              className="scroll-mt-6 rounded-3xl border border-white/10 bg-gradient-to-b from-[rgba(15,23,55,0.92)] to-[rgba(8,12,30,0.97)] backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.5)] p-6"
+            >
               <p className="text-[11px] font-bold text-[#7dd3fc] uppercase tracking-wide mb-1">
                 Comienza tu registro aquí
               </p>
@@ -178,9 +240,11 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
                 <div>
                   <label className="block text-[10.5px] font-bold uppercase tracking-wide text-white/45 mb-1.5">Nombre</label>
                   <input
+                    ref={nombreRef}
                     value={nombre}
                     onChange={(e) => validarNombre(e.target.value)}
                     placeholder="Ej. María"
+                    autoComplete="given-name"
                     className="w-full h-[46px] px-3.5 rounded-xl bg-white/5 border border-white/[0.14] text-white text-[14px] outline-none focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/20"
                   />
                   {errorNombre && <p className="text-red-400 text-[12px] mt-1">{errorNombre}</p>}
@@ -192,6 +256,8 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
                     value={correo}
                     onChange={(e) => validarCorreo(e.target.value)}
                     placeholder="tucorreo@ejemplo.com"
+                    inputMode="email"
+                    autoComplete="email"
                     className="w-full h-[46px] px-3.5 rounded-xl bg-white/5 border border-white/[0.14] text-white text-[14px] outline-none focus:border-[#38bdf8] focus:ring-2 focus:ring-[#38bdf8]/20"
                   />
                   {errorCorreo && <p className="text-red-400 text-[12px] mt-1">{errorCorreo}</p>}
@@ -232,6 +298,19 @@ export default function InvitacionLanding({ invitadorLinkId, slotToken, invitado
           </div>
         )}
       </div>
+
+      {/* Botón fijo: siempre a la mano hasta que el formulario está a la vista. */}
+      {!enviado && !formularioVisible && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 pointer-events-none bg-gradient-to-t from-[#060915] via-[#060915]/70 to-transparent">
+          <button
+            type="button"
+            onClick={iniciarRegistro}
+            className={`${botonPrincipal} max-w-xl pointer-events-auto`}
+          >
+            Iniciar registro
+          </button>
+        </div>
+      )}
     </div>
   );
 }
