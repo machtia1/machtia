@@ -1,6 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+
+export interface ControlReproductor {
+  /** Vuelve al inicio y reproduce (con sonido, si el navegador lo permite). */
+  repetir: () => void;
+}
 
 interface Props {
   src: string;
@@ -8,8 +13,8 @@ interface Props {
   /** Nombre del video para lectores de pantalla. */
   titulo: string;
   /**
-   * 'estricto': sin barra para adelantar; solo se puede pausar y reanudar.
-   * 'libre': controles normales del navegador.
+   * 'estricto': la barra de avance solo se ve; no se puede adelantar.
+   * 'libre': la persona puede mover la barra de avance.
    */
   modo: 'estricto' | 'libre';
   /** Arranca solo cuando el video queda a la vista. */
@@ -18,17 +23,36 @@ interface Props {
   sonido: boolean;
   onSonidoChange: (activo: boolean) => void;
   onTerminar?: () => void;
+  /** La persona volvió a empezar el video (por ejemplo, con el botón de repetir del recuadro). */
+  onReiniciar?: () => void;
   /** El archivo no existe o no se pudo cargar. */
   onNoDisponible?: () => void;
-  /** Lo que se muestra encima del video cuando termina. Recibe la acción de repetir. */
-  alTerminar?: (repetir: () => void) => ReactNode;
 }
 
-const MARCO = 'relative aspect-video rounded-2xl overflow-hidden bg-black border border-white/10';
+type ConPrefijo = HTMLElement & {
+  webkitRequestFullscreen?: () => void;
+  webkitEnterFullscreen?: () => void;
+};
+type DocumentoConPrefijo = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => void;
+};
 
-function IconoPlay() {
+const MARCO_VACIO = 'relative aspect-video rounded-2xl overflow-hidden bg-black';
+
+function formatoTiempo(segundos: number): string {
+  if (!isFinite(segundos) || segundos < 0) segundos = 0;
+  const total = Math.floor(segundos);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${String(m).padStart(2, '0')}:${ss}`;
+}
+
+function IconoPlay({ tam = 20 }: { tam?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <svg width={tam} height={tam} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
       <path d="M5 3l12 7-12 7V3z" />
     </svg>
   );
@@ -36,7 +60,7 @@ function IconoPlay() {
 
 function IconoPausa() {
   return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
       <rect x="4" y="3" width="4.2" height="14" rx="1" />
       <rect x="11.8" y="3" width="4.2" height="14" rx="1" />
     </svg>
@@ -45,7 +69,7 @@ function IconoPausa() {
 
 function IconoSonido({ activo }: { activo: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M11 5L6 9H3v6h3l5 4V5z" fill="currentColor" stroke="none" />
       {activo ? (
         <>
@@ -62,18 +86,43 @@ function IconoSonido({ activo }: { activo: boolean }) {
   );
 }
 
-export default function ReproductorVideo({
-  src,
-  poster,
-  titulo,
-  modo,
-  inicioAutomatico = false,
-  sonido,
-  onSonidoChange,
-  onTerminar,
-  onNoDisponible,
-  alTerminar,
-}: Props) {
+function IconoPantalla({ completa }: { completa: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {completa ? (
+        <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+      ) : (
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+      )}
+    </svg>
+  );
+}
+
+function IconoRepetir() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 12a8 8 0 10-2.5 5.8" />
+      <path d="M20 5v5h-5" />
+    </svg>
+  );
+}
+
+const ReproductorVideo = forwardRef<ControlReproductor, Props>(function ReproductorVideo(
+  {
+    src,
+    poster,
+    titulo,
+    modo,
+    inicioAutomatico = false,
+    sonido,
+    onSonidoChange,
+    onTerminar,
+    onReiniciar,
+    onNoDisponible,
+  },
+  ref
+) {
+  const contenedorRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const maxVisto = useRef(0); // segundo más lejano que la persona ya vio
   const yaArranco = useRef(false);
@@ -86,15 +135,43 @@ export default function ReproductorVideo({
   const [terminado, setTerminado] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [noDisponible, setNoDisponible] = useState(false);
-  const [progreso, setProgreso] = useState(0);
+  const [tiempo, setTiempo] = useState(0);
+  const [duracion, setDuracion] = useState(0);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  const [puedePantallaCompleta, setPuedePantallaCompleta] = useState(false);
 
   useEffect(() => setMontado(true), []);
 
-  // El video siempre arranca silenciado (los navegadores no dejan otra cosa);
-  // si la persona ya activó el sonido antes, se respeta.
+  // El video nace con el sonido que la persona ya eligió (silenciado en el
+  // primer video, porque los navegadores no permiten otra cosa al arrancar solo).
+  // La propiedad muted del <video> sigue a 'sonido' y no al revés; si el navegador
+  // se niega a reproducir con sonido, reproducir() lo deja en silencio.
   useEffect(() => {
-    if (videoRef.current) videoRef.current.muted = !sonido;
+    if (videoRef.current && videoRef.current.muted !== !sonido) videoRef.current.muted = !sonido;
   }, [sonido, montado]);
+
+  // ¿Este navegador sabe poner el video en pantalla completa?
+  useEffect(() => {
+    const c = contenedorRef.current as ConPrefijo | null;
+    const v = videoRef.current as ConPrefijo | null;
+    setPuedePantallaCompleta(
+      Boolean(c?.requestFullscreen || c?.webkitRequestFullscreen || v?.webkitEnterFullscreen)
+    );
+  }, [montado]);
+
+  useEffect(() => {
+    const revisar = () => {
+      const doc = document as DocumentoConPrefijo;
+      const elemento = doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+      setPantallaCompleta(elemento !== null && elemento === contenedorRef.current);
+    };
+    document.addEventListener('fullscreenchange', revisar);
+    document.addEventListener('webkitfullscreenchange', revisar);
+    return () => {
+      document.removeEventListener('fullscreenchange', revisar);
+      document.removeEventListener('webkitfullscreenchange', revisar);
+    };
+  }, []);
 
   const reproducir = useCallback(async () => {
     const v = videoRef.current;
@@ -114,6 +191,23 @@ export default function ReproductorVideo({
       }
     }
   }, [onSonidoChange]);
+
+  const repetir = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    maxVisto.current = 0;
+    v.currentTime = 0;
+    setTerminado(false);
+    setTiempo(0);
+    // La persona acaba de tocar un botón, así que se intenta con sonido
+    // (si el navegador no lo permite, reproducir() lo deja en silencio).
+    v.muted = false;
+    if (v.volume === 0) v.volume = 1;
+    reproducir();
+    onReiniciar?.();
+  }, [reproducir, onReiniciar]);
+
+  useImperativeHandle(ref, () => ({ repetir }), [repetir]);
 
   // Arranque automático al verse, y pausa al salirse de pantalla.
   useEffect(() => {
@@ -148,7 +242,8 @@ export default function ReproductorVideo({
 
   function alternarPausa() {
     const v = videoRef.current;
-    if (!v || terminado) return;
+    if (!v) return;
+    if (terminado) return repetir();
     if (v.paused) reproducir();
     else v.pause();
   }
@@ -165,18 +260,22 @@ export default function ReproductorVideo({
     // onVolumeChange avisa a la página del cambio.
   }
 
-  function repetir() {
-    const v = videoRef.current;
-    if (!v) return;
-    maxVisto.current = 0;
-    v.currentTime = 0;
-    setTerminado(false);
-    setProgreso(0);
-    // La persona acaba de tocar un botón, así que se intenta con sonido
-    // (si el navegador no lo permite, reproducir() lo deja en silencio).
-    v.muted = false;
-    if (v.volume === 0) v.volume = 1;
-    reproducir();
+  function alternarPantallaCompleta() {
+    const c = contenedorRef.current as ConPrefijo | null;
+    const v = videoRef.current as ConPrefijo | null;
+    const doc = document as DocumentoConPrefijo;
+    if (doc.fullscreenElement ?? doc.webkitFullscreenElement) {
+      (doc.exitFullscreen ?? doc.webkitExitFullscreen)?.call(doc);
+      return;
+    }
+    if (c?.requestFullscreen) {
+      c.requestFullscreen().catch(() => {});
+    } else if (c?.webkitRequestFullscreen) {
+      c.webkitRequestFullscreen();
+    } else if (v?.webkitEnterFullscreen) {
+      // iPhone: solo permite pantalla completa del video; igual se bloquea el adelantar.
+      v.webkitEnterFullscreen();
+    }
   }
 
   // Modo estricto: si alguien intenta saltar hacia adelante, regresa al punto visto.
@@ -190,25 +289,35 @@ export default function ReproductorVideo({
     const v = videoRef.current;
     if (!v || v.seeking) return;
     if (v.currentTime > maxVisto.current) maxVisto.current = v.currentTime;
-    if (v.duration > 0) setProgreso(Math.min(1, v.currentTime / v.duration));
+    setTiempo(v.currentTime);
   }
 
   function alFinalizar() {
     const v = videoRef.current;
-    if (v && v.duration > 0) maxVisto.current = v.duration;
-    setProgreso(1);
+    if (v && v.duration > 0) {
+      maxVisto.current = v.duration;
+      setTiempo(v.duration);
+    }
     setTerminado(true);
     setReproduciendo(false);
     onTerminar?.();
   }
 
+  function moverBarra(valor: number) {
+    const v = videoRef.current;
+    if (!v || modo !== 'libre') return;
+    v.currentTime = valor;
+    setTiempo(valor);
+    if (terminado && valor < duracion) setTerminado(false);
+  }
+
   if (!montado) {
-    return <div aria-hidden="true" className={MARCO} />;
+    return <div aria-hidden="true" className={MARCO_VACIO} />;
   }
 
   if (noDisponible) {
     return (
-      <div className={`${MARCO} flex items-center justify-center text-white/45 text-[13px] px-6 text-center`}>
+      <div className={`${MARCO_VACIO} flex items-center justify-center text-white/55 text-[14px] px-6 text-center`}>
         {titulo}: próximamente
       </div>
     );
@@ -216,108 +325,164 @@ export default function ReproductorVideo({
 
   const estricto = modo === 'estricto';
   const silenciado = !sonido;
+  const porcentaje = duracion > 0 ? Math.min(100, (tiempo / duracion) * 100) : 0;
 
   return (
-    <div className={MARCO} onContextMenu={(e) => e.preventDefault()}>
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster || undefined}
-        aria-label={titulo}
-        className="w-full h-full object-contain"
-        playsInline
-        muted
-        preload="auto"
-        controls={!estricto}
-        controlsList="nodownload noremoteplayback noplaybackrate"
-        disablePictureInPicture
-        disableRemotePlayback
-        onClick={estricto ? alternarPausa : undefined}
-        onError={fallo}
-        onLoadedData={() => setCargando(false)}
-        onCanPlay={() => setCargando(false)}
-        onWaiting={() => setCargando(true)}
-        onPlaying={() => setCargando(false)}
-        onPlay={() => {
-          pausadoPorScroll.current = false;
-          setReproduciendo(true);
-          setTerminado(false);
-        }}
-        onPause={() => setReproduciendo(false)}
-        onSeeking={alBuscar}
-        onTimeUpdate={alAvanzar}
-        onEnded={alFinalizar}
-        onVolumeChange={() => {
-          if (videoRef.current) onSonidoChange(!videoRef.current.muted);
-        }}
-      />
+    <div
+      ref={contenedorRef}
+      onContextMenu={(e) => e.preventDefault()}
+      className={`flex flex-col bg-black ${
+        pantallaCompleta ? '' : 'rounded-2xl overflow-hidden shadow-[0_18px_44px_rgba(8,42,92,0.22)]'
+      }`}
+    >
+      <div className={`relative bg-black ${pantallaCompleta ? 'flex-1 min-h-0' : 'aspect-video'}`}>
+        <video
+          ref={videoRef}
+          src={src}
+          poster={poster || undefined}
+          aria-label={titulo}
+          className="absolute inset-0 w-full h-full object-contain"
+          playsInline
+          muted={!sonido}
+          preload="auto"
+          controlsList="nodownload noremoteplayback noplaybackrate"
+          disablePictureInPicture
+          disableRemotePlayback
+          onClick={alternarPausa}
+          onError={fallo}
+          onLoadedMetadata={(e) => setDuracion(e.currentTarget.duration || 0)}
+          onDurationChange={(e) => setDuracion(e.currentTarget.duration || 0)}
+          onLoadedData={() => setCargando(false)}
+          onCanPlay={() => setCargando(false)}
+          onWaiting={() => setCargando(true)}
+          onPlaying={() => setCargando(false)}
+          onPlay={() => {
+            pausadoPorScroll.current = false;
+            setReproduciendo(true);
+            setTerminado(false);
+          }}
+          onPause={() => setReproduciendo(false)}
+          onSeeking={alBuscar}
+          onTimeUpdate={alAvanzar}
+          onEnded={alFinalizar}
+          onVolumeChange={() => {
+            if (videoRef.current) onSonidoChange(!videoRef.current.muted);
+          }}
+        />
 
-      {cargando && !terminado && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-9 w-9 rounded-full border-2 border-white/25 border-t-white animate-spin" aria-label="Cargando video" />
-        </div>
-      )}
+        {cargando && !terminado && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full border-2 border-white/25 border-t-white animate-spin" aria-label="Cargando video" />
+          </div>
+        )}
 
-      {/* Aviso para activar el sonido mientras el video corre en silencio. */}
-      {silenciado && reproduciendo && !terminado && (
+        {/* Aviso para activar el sonido mientras el video corre en silencio. */}
+        {silenciado && reproduciendo && !terminado && (
+          <button
+            type="button"
+            onClick={alternarSonido}
+            className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-full bg-black/65 backdrop-blur px-3.5 h-9 text-[12.5px] font-semibold text-white border border-white/25 hover:bg-black/80 transition-colors"
+          >
+            <IconoSonido activo={false} />
+            Activar sonido
+          </button>
+        )}
+
+        {/* Play grande cuando el video está en pausa. */}
+        {!reproduciendo && !terminado && !cargando && (
+          <button
+            type="button"
+            onClick={alternarPausa}
+            aria-label="Reproducir video"
+            className="absolute inset-0 flex items-center justify-center bg-black/25"
+          >
+            <span className="w-16 h-16 rounded-full bg-white/90 text-cm-navy flex items-center justify-center shadow-lg">
+              <IconoPlay tam={26} />
+            </span>
+          </button>
+        )}
+
+        {/* Al terminar: icono para volver a verlo. */}
+        {terminado && (
+          <button
+            type="button"
+            onClick={repetir}
+            aria-label="Volver a ver el video"
+            className="absolute inset-0 flex items-center justify-center bg-black/45"
+          >
+            <span className="w-16 h-16 rounded-full bg-white/90 text-cm-navy flex items-center justify-center shadow-lg">
+              <IconoRepetir />
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Barra de controles: pausa, avance, tiempo, sonido y pantalla completa. */}
+      <div className="flex items-center gap-2.5 sm:gap-4 bg-[#0b1730] px-3 sm:px-4 h-12 sm:h-14 text-white">
+        <button
+          type="button"
+          onClick={alternarPausa}
+          aria-label={terminado ? 'Volver a ver el video' : reproduciendo ? 'Pausar video' : 'Reproducir video'}
+          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full hover:bg-white/15 transition-colors"
+        >
+          {terminado ? <IconoRepetir /> : reproduciendo ? <IconoPausa /> : <IconoPlay />}
+        </button>
+
+        {estricto ? (
+          <div
+            role="progressbar"
+            aria-label="Avance del video"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(porcentaje)}
+            className="pointer-events-none relative h-1 flex-1 rounded-full bg-white/30"
+          >
+            <div className="h-full rounded-full bg-cm-cian" style={{ width: `${porcentaje}%` }} />
+            <div
+              className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white ring-2 ring-cm-cian"
+              style={{ left: `calc(${porcentaje}% - 7px)` }}
+            />
+          </div>
+        ) : (
+          <input
+            type="range"
+            aria-label="Avance del video"
+            className="rango-video flex-1"
+            min={0}
+            max={duracion || 1}
+            step={0.1}
+            value={Math.min(tiempo, duracion || 1)}
+            style={{ ['--avance' as string]: `${porcentaje}%` }}
+            onChange={(e) => moverBarra(Number(e.target.value))}
+          />
+        )}
+
+        <span className="shrink-0 text-[12px] sm:text-[14px] tabular-nums text-white/90">
+          {formatoTiempo(tiempo)} / {formatoTiempo(duracion)}
+        </span>
+
         <button
           type="button"
           onClick={alternarSonido}
-          className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-full bg-black/65 backdrop-blur px-3.5 h-9 text-[12.5px] font-semibold text-white border border-white/20 hover:bg-black/80 transition-colors"
+          aria-label={silenciado ? 'Activar sonido' : 'Silenciar video'}
+          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full hover:bg-white/15 transition-colors"
         >
-          <IconoSonido activo={false} />
-          Activar sonido
+          <IconoSonido activo={!silenciado} />
         </button>
-      )}
 
-      {estricto && (
-        <>
-          {/* Botón grande de play cuando está en pausa. */}
-          {!reproduciendo && !terminado && !cargando && (
-            <button
-              type="button"
-              onClick={alternarPausa}
-              aria-label="Reproducir video"
-              className="absolute inset-0 flex items-center justify-center bg-black/30"
-            >
-              <span className="w-14 h-14 rounded-full bg-white/25 backdrop-blur flex items-center justify-center text-white">
-                <IconoPlay />
-              </span>
-            </button>
-          )}
-
-          {/* Barra inferior: pausa, avance (solo se ve, no se toca) y sonido. */}
-          {!terminado && (
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-3 pb-2.5 pt-8 bg-gradient-to-t from-black/70 to-transparent">
-              <button
-                type="button"
-                onClick={alternarPausa}
-                aria-label={reproduciendo ? 'Pausar video' : 'Reproducir video'}
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-white/15 transition-colors"
-              >
-                {reproduciendo ? <IconoPausa /> : <IconoPlay />}
-              </button>
-              <div aria-hidden="true" className="pointer-events-none h-1 flex-1 rounded-full bg-white/25 overflow-hidden">
-                <div className="h-full rounded-full bg-[#38bdf8]" style={{ width: `${progreso * 100}%` }} />
-              </div>
-              <button
-                type="button"
-                onClick={alternarSonido}
-                aria-label={silenciado ? 'Activar sonido' : 'Silenciar video'}
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-white/15 transition-colors"
-              >
-                <IconoSonido activo={!silenciado} />
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {terminado && alTerminar && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#060915]/85 backdrop-blur-sm px-6">
-          {alTerminar(repetir)}
-        </div>
-      )}
+        {puedePantallaCompleta && (
+          <button
+            type="button"
+            onClick={alternarPantallaCompleta}
+            aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full hover:bg-white/15 transition-colors"
+          >
+            <IconoPantalla completa={pantallaCompleta} />
+          </button>
+        )}
+      </div>
     </div>
   );
-}
+});
+
+export default ReproductorVideo;

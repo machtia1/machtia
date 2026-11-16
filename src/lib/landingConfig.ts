@@ -11,14 +11,14 @@ export interface EtapaContador {
   id: string;
   /** Momento exacto en que termina (ISO 8601 con zona horaria). */
   objetivo: string;
-  /** Texto que acompaña al contador. */
+  /** Texto que acompaña al contador (hoy es el mismo en las tres). */
   titulo: string;
 }
 
 export const ETAPAS_CONTADOR: EtapaContador[] = [
-  { id: '20-nov', objetivo: '2026-11-20T00:00:00-06:00', titulo: 'Falta para el 20 de noviembre' },
-  { id: '26-nov', objetivo: '2026-11-26T00:00:00-06:00', titulo: 'Falta para el 26 de noviembre' },
-  { id: '03-dic', objetivo: '2026-12-03T00:00:00-06:00', titulo: 'Falta para el 3 de diciembre' },
+  { id: '20-nov', objetivo: '2026-11-20T00:00:00-06:00', titulo: 'Esta oferta termina en:' },
+  { id: '26-nov', objetivo: '2026-11-26T00:00:00-06:00', titulo: 'Esta oferta termina en:' },
+  { id: '03-dic', objetivo: '2026-12-03T00:00:00-06:00', titulo: 'Esta oferta termina en:' },
 ];
 
 // ───────── Videos ─────────
@@ -73,6 +73,6 @@ export const PREGUNTAS_FRECUENTES: PreguntaFrecuente[] = [
     id: 'hablar-asesor',
     pregunta: '¿Puedo hablar con una persona?',
     respuesta:
-      'Claro. Con el botón de WhatsApp de abajo puedes escribirle a un asesor para resolver tus dudas.',
+      'Claro. Toca "Contactar a un asesor" y te atiende por WhatsApp para resolver tus dudas.',
   },
 ];

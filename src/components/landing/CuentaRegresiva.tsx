@@ -32,20 +32,27 @@ function calcular(ahora: number): Restante | null {
 
 const dos = (n: number) => String(n).padStart(2, '0');
 
-function Caja({ valor, etiqueta }: { valor: string; etiqueta: string }) {
+function Unidad({ valor, etiqueta }: { valor: number; etiqueta: string }) {
   return (
-    <div className="flex-1 min-w-0 rounded-xl border border-white/10 bg-white/[0.04] py-2.5 sm:py-3 text-center">
-      <div className="text-[26px] sm:text-[32px] font-bold leading-none tabular-nums text-white">{valor}</div>
-      <div className="mt-1.5 text-[9.5px] sm:text-[10.5px] font-bold uppercase tracking-wide text-[#7dd3fc]">
-        {etiqueta}
-      </div>
+    <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
+      <span className="text-[30px] sm:text-[52px] font-extrabold leading-none tabular-nums">{dos(valor)}</span>
+      <span className="mt-1 sm:mt-0 text-[11px] sm:text-[19px] font-medium text-white/85">{etiqueta}</span>
     </div>
   );
 }
 
+function Separador() {
+  return (
+    <span aria-hidden="true" className="self-start sm:self-center mt-2 sm:mt-0 flex flex-col gap-1.5 sm:gap-2">
+      <span className="block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-cm-cian" />
+      <span className="block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-cm-cian" />
+    </span>
+  );
+}
+
 /**
- * Cuentas regresivas encadenadas (ver ETAPAS_CONTADOR). Cuando termina una,
- * pasa sola a la siguiente; después de la última no se muestra nada.
+ * Franja con las cuentas regresivas encadenadas (ver ETAPAS_CONTADOR). Cuando
+ * termina una pasa sola a la siguiente; después de la última no se muestra nada.
  */
 export default function CuentaRegresiva() {
   const { listo, ahora } = useHoraServidor();
@@ -62,28 +69,30 @@ export default function CuentaRegresiva() {
 
   // Antes de saber la hora del servidor se reserva el espacio (sin saltos de pantalla).
   if (!listo || restante === undefined) {
-    return <div aria-hidden="true" className="h-[118px] sm:h-[128px] mb-6" />;
+    return <div aria-hidden="true" className="h-[104px] sm:h-[136px]" />;
   }
   if (!restante) return null;
 
   const { etapa, dias, horas, minutos, segundos } = restante;
 
   return (
-    <section
-      aria-label={etapa.titulo}
-      className="mb-6 rounded-2xl border border-white/10 bg-gradient-to-b from-[rgba(15,23,55,0.7)] to-[rgba(8,12,30,0.7)] p-4"
-    >
-      <p className="mb-3 text-center text-[12px] font-bold uppercase tracking-wide text-white/70">{etapa.titulo}</p>
-      <div
-        role="timer"
-        aria-live="off"
-        aria-label={`Faltan ${dias} días, ${horas} horas y ${minutos} minutos`}
-        className="flex gap-2 sm:gap-3"
-      >
-        <Caja valor={String(dias)} etiqueta={dias === 1 ? 'Día' : 'Días'} />
-        <Caja valor={dos(horas)} etiqueta="Horas" />
-        <Caja valor={dos(minutos)} etiqueta="Min" />
-        <Caja valor={dos(segundos)} etiqueta="Seg" />
+    <section aria-label="Cuenta regresiva" className="bg-cm-navy text-white">
+      <div className="mx-auto max-w-4xl px-4 py-3.5 sm:py-5 text-center">
+        <p className="text-[14px] sm:text-[22px] font-bold mb-2 sm:mb-3">{etapa.titulo}</p>
+        <div
+          role="timer"
+          aria-live="off"
+          aria-label={`Faltan ${dias} días, ${horas} horas y ${minutos} minutos`}
+          className="flex items-center justify-center gap-3 sm:gap-6"
+        >
+          <Unidad valor={dias} etiqueta={dias === 1 ? 'día' : 'días'} />
+          <Separador />
+          <Unidad valor={horas} etiqueta={horas === 1 ? 'hora' : 'horas'} />
+          <Separador />
+          <Unidad valor={minutos} etiqueta="min" />
+          <Separador />
+          <Unidad valor={segundos} etiqueta={segundos === 1 ? 'segundo' : 'segundos'} />
+        </div>
       </div>
     </section>
   );
