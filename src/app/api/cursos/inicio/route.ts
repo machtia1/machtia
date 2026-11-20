@@ -68,7 +68,7 @@ export async function GET(request: Request) {
       }),
       prisma.instructor.findMany({
         orderBy: { nombre: 'asc' },
-        include: { _count: { select: { cursos: true } } },
+        include: { _count: { select: { cursos: { where: { activo: true } } } } },
       }),
       prisma.eventoCurso.findMany({
         where: { fechaHora: { gte: new Date() } },

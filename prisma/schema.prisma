@@ -110,6 +110,10 @@ model User {
   // pertenece a la Red ni genera regalías.
   espacioProfesor EspacioProfesor?
 
+  // Perfil público de instructor y cursos que creó (solo Profesor/Facilitador)
+  instructor    Instructor?
+  cursosCreados Curso[]     @relation("CursosAutor")
+
   // Red Alterna — regalías que este usuario generó y las que ganó
   regaliasOrigen      RegaliaRedAlterna[] @relation("RegaliasOrigen")
   regaliasGanadas     RegaliaRedAlterna[] @relation("RegaliasGanadas")
@@ -462,6 +466,11 @@ model Instructor {
   nombre       String
   especialidad String
   fotoUrl      String?
+  estudios     String? // títulos, diplomas y certificados (texto libre)
+
+  // Si es un Profesor/Facilitador, su perfil público está ligado a su cuenta.
+  usuarioId String? @unique
+  usuario   User?   @relation(fields: [usuarioId], references: [id])
 
   cursos Curso[]
 
@@ -514,6 +523,19 @@ model Curso {
 
   activo Boolean @default(true)
 
+  // Cursos creados por un Profesor/Facilitador. "activo" = visible al
+  // público = no es borrador y el administrador no lo ocultó.
+  autorId         String?
+  autor           User?   @relation("CursosAutor", fields: [autorId], references: [id])
+  temario         String?
+  horas           Float?
+  calificacionMinima Int  @default(70)
+  calificacionMaxima Int  @default(100)
+  permiteArchivos Boolean @default(false)
+  borrador        Boolean @default(false)
+  ocultoPorAdmin  Boolean @default(false)
+  archivos        ArchivoCurso[]
+
   lecciones     Leccion[]
   inscripciones InscripcionCurso[]
   eventos       EventoCurso[]
@@ -541,8 +563,34 @@ model Leccion {
   duracionMinutos Int     @default(5)
 
   completadas LeccionCompletada[]
+  preguntas   PreguntaModulo[]
 
   @@unique([cursoId, orden])
+}
+
+// Pregunta de opción múltiple de un módulo (máximo 4 por módulo).
+// "correctas" guarda las posiciones (0, 1, 2...) de las respuestas correctas.
+model PreguntaModulo {
+  id        String  @id @default(cuid())
+  leccionId String
+  leccion   Leccion @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  orden     Int
+  texto     String
+  opciones  String[]
+  correctas Int[]
+
+  @@unique([leccionId, orden])
+}
+
+// Archivos adicionales de un curso (solo si el profesor lo activa).
+model ArchivoCurso {
+  id       String @id @default(cuid())
+  cursoId  String
+  curso    Curso  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  nombre   String
+  url      String
+  tamano   Int    @default(0)
+  creadoEn DateTime @default(now())
 }
 
 // Progreso de UN usuario en UN curso — pedido por el cliente el 26

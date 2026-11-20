@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, DollarSign, LogOut, User as UserIcon, Users } from 'lucide-react';
 import LoadingLogo from './LoadingLogo';
+import MisCursosProfesor from './MisCursosProfesor';
+import PerfilProfesor from './PerfilProfesor';
 
 interface UsuarioProfesor {
+  id: string;
   nombre: string;
   apellido: string;
   correo: string;
@@ -154,39 +157,10 @@ export default function PanelProfesor({ user }: { user: UsuarioProfesor }) {
           </section>
         )}
 
-        {seccion === 'cursos' && (
-          <section
-            aria-label="Mis Cursos"
-            className="bg-white border border-[#E4E7EE] rounded-2xl p-8 text-center"
-          >
-            <BookOpen size={30} className="mx-auto text-cm-primary mb-3" />
-            <h2 className="text-[17px] font-semibold mb-1">Mis Cursos</h2>
-            <p className="text-[14px] text-[#6B7280] max-w-md mx-auto">
-              Muy pronto podrás crear tus cursos aquí: portada, módulos, videos y evaluaciones.
-            </p>
-          </section>
-        )}
+        {seccion === 'cursos' && <MisCursosProfesor userId={user.id} />}
 
         {seccion === 'perfil' && (
-          <section aria-label="Mi perfil" className="bg-white border border-[#E4E7EE] rounded-2xl p-6">
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-16 h-16 rounded-full bg-cm-primary text-white font-bold text-[24px] overflow-hidden flex items-center justify-center shrink-0">
-                {user.fotoPerfilUrl ? (
-                  <img src={user.fotoPerfilUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
-                ) : (
-                  user.nombre.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="text-[17px] font-semibold truncate">{nombreCompleto}</div>
-                <div className="text-[13px] text-[#6B7280] truncate">{user.correo}</div>
-              </div>
-            </div>
-            <p className="text-[13.5px] text-[#6B7280]">
-              Pronto podrás completar tu perfil público: foto, nombre público y tus estudios, para
-              aparecer en &quot;Conoce a nuestros instructores&quot;.
-            </p>
-          </section>
+          <PerfilProfesor userId={user.id} nombreInicial={nombreCompleto} correo={user.correo} />
         )}
       </main>
     </div>
