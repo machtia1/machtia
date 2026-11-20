@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CheckSquare, GraduationCap, Image, LayoutGrid, Megaphone, Users } from 'lucide-react';
+import { CheckSquare, GraduationCap, Image, Landmark, LayoutGrid, Megaphone, Users } from 'lucide-react';
 
 const TABS = [
   { label: 'Red General', href: '/home/red-general', icon: LayoutGrid },
   { label: 'Aprobar registros', href: '/home/aprobaciones', icon: CheckSquare },
   { label: 'Usuarios', href: '/home/usuarios', icon: Users },
   { label: 'Profesores', href: '/home/profesores', icon: GraduationCap },
+  { label: 'Datos bancarios', href: '/home/datos-bancarios', icon: Landmark },
   { label: 'Anuncios', href: '/home/anuncios', icon: Megaphone },
   { label: 'Publicidad', href: '/home/publicidad-admin', icon: Image },
 ];

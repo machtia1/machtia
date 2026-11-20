@@ -30,6 +30,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Primero debes inscribirte al curso' }, { status: 400 });
   }
 
+  // Los cursos con examen por módulo se califican por módulo, no con la evaluación general.
+  const conExamenes = await prisma.preguntaModulo.count({ where: { leccion: { cursoId: params.id } } });
+  if (conExamenes > 0) {
+    return NextResponse.json({ error: 'Este curso se evalúa por módulo' }, { status: 400 });
+  }
+
   const calificacion = calificarEvaluacion(respuestas);
   await prisma.inscripcionCurso.update({
     where: { id: inscripcion.id },

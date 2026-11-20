@@ -125,6 +125,8 @@ model User {
 
   // Cursos/Talleres — Elemento 4 (26 sept 2026)
   inscripcionesCursos InscripcionCurso[]
+  certificados        Certificado[]
+  datosBancarios      DatosBancarios?
 
   // true si un Administrador la eliminó definitivamente de la Red de
   // Usuarios ("Eliminar definitivo + comprimir"). Conserva la cuenta
@@ -535,6 +537,7 @@ model Curso {
   borrador        Boolean @default(false)
   ocultoPorAdmin  Boolean @default(false)
   archivos        ArchivoCurso[]
+  certificados    Certificado[]
 
   lecciones     Leccion[]
   inscripciones InscripcionCurso[]
@@ -564,6 +567,7 @@ model Leccion {
 
   completadas LeccionCompletada[]
   preguntas   PreguntaModulo[]
+  resultados  ResultadoModulo[]
 
   @@unique([cursoId, orden])
 }
@@ -610,6 +614,8 @@ model InscripcionCurso {
   calificacionEvaluacion Int?
 
   leccionesCompletadas LeccionCompletada[]
+  resultadosModulo     ResultadoModulo[]
+  certificado          Certificado?
 
   inscritoEn      DateTime @default(now())
   ultimaActividad DateTime @updatedAt
@@ -647,3 +653,62 @@ model EventoCurso {
   @@index([fechaHora])
 }
 
+
+// Resultado de un alumno en el examen de un módulo. Se guarda la mejor
+// calificación (los reintentos están permitidos) y cuántos intentos lleva.
+model ResultadoModulo {
+  id            String           @id @default(cuid())
+  inscripcionId String
+  inscripcion   InscripcionCurso @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  leccionId     String
+  leccion       Leccion          @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+
+  mejorNota   Int // en la escala del curso (0 a calificacionMaxima)
+  ultimaNota  Int
+  intentos    Int      @default(1)
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([inscripcionId, leccionId])
+}
+
+// Constancia que se emite sola cuando el alumno termina todos los módulos
+// y su promedio alcanza la calificación mínima del curso. Guarda una copia
+// de los datos (nombre, curso, instructor) para que la constancia no
+// cambie si después se edita el curso o el perfil.
+model Certificado {
+  id            String           @id @default(cuid())
+  folio         String           @unique
+  inscripcionId String           @unique
+  inscripcion   InscripcionCurso @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  usuarioId     String
+  usuario       User             @relation(fields: [usuarioId], references: [id])
+  cursoId       String
+  curso         Curso            @relation(fields: [cursoId], references: [id])
+
+  nombreAlumno   String
+  tituloCurso    String
+  instructor     String?
+  horas          Float?
+  calificacion   Int
+  calificacionMaxima Int @default(100)
+  emitidoEn      DateTime @default(now())
+
+  @@index([usuarioId])
+}
+
+// Datos para pagarle al usuario (cuenta bancaria y/o wallet). TODO el
+// contenido sensible va cifrado (AES-256-GCM, ver src/lib/cifrado.ts) en
+// "datosCifrados"; las columnas visibles solo dicen si hay datos. Solo el
+// Administrador puede leerlos completos; el dueño los ve enmascarados.
+model DatosBancarios {
+  id         String  @id @default(cuid())
+  usuarioId  String  @unique
+  usuario    User    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  datosCifrados String
+  tieneBanco    Boolean @default(false)
+  tieneWallet   Boolean @default(false)
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}

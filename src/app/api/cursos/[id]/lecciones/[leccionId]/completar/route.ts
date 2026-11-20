@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { recalcularProgreso } from '@/lib/cursos';
+import { evaluarCierreCurso } from '@/lib/evaluacionModulos';
 
 /** Marca una lección como vista/completada y recalcula el % de avance del curso. */
 export async function POST(
@@ -37,5 +38,7 @@ export async function POST(
 
   const actualizada = await recalcularProgreso(inscripcion.id);
 
-  return NextResponse.json({ inscripcion: actualizada });
+  const curso = await evaluarCierreCurso(inscripcion.id);
+
+  return NextResponse.json({ inscripcion: actualizada, curso });
 }

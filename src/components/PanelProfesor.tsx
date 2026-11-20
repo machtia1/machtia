@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, DollarSign, LogOut, User as UserIcon, Users } from 'lucide-react';
+import { BookOpen, DollarSign, Landmark, LogOut, User as UserIcon, Users } from 'lucide-react';
 import LoadingLogo from './LoadingLogo';
 import MisCursosProfesor from './MisCursosProfesor';
 import PerfilProfesor from './PerfilProfesor';
+import DatosBancarios from './DatosBancarios';
 
 interface UsuarioProfesor {
   id: string;
@@ -23,12 +24,13 @@ interface Ganancias {
   yaInicio: boolean;
 }
 
-type Seccion = 'ganancias' | 'cursos' | 'perfil';
+type Seccion = 'ganancias' | 'cursos' | 'perfil' | 'banco';
 
 const SECCIONES: { id: Seccion; etiqueta: string; icono: typeof DollarSign }[] = [
   { id: 'ganancias', etiqueta: 'Mis Ganancias', icono: DollarSign },
   { id: 'cursos', etiqueta: 'Mis Cursos', icono: BookOpen },
   { id: 'perfil', etiqueta: 'Mi perfil', icono: UserIcon },
+  { id: 'banco', etiqueta: 'Datos bancarios', icono: Landmark },
 ];
 
 const formatoMoneda = (n: number) =>
@@ -158,6 +160,8 @@ export default function PanelProfesor({ user }: { user: UsuarioProfesor }) {
         )}
 
         {seccion === 'cursos' && <MisCursosProfesor userId={user.id} />}
+
+        {seccion === 'banco' && <DatosBancarios />}
 
         {seccion === 'perfil' && (
           <PerfilProfesor userId={user.id} nombreInicial={nombreCompleto} correo={user.correo} />

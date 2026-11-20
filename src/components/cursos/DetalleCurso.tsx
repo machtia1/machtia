@@ -12,6 +12,8 @@ import {
   FileText,
   Award,
   Lock,
+  Download,
+  ClipboardCheck,
 } from 'lucide-react';
 import LoadingLogo from '@/components/LoadingLogo';
 import { CATEGORIA_LABEL, NIVEL_LABEL } from './TarjetaCurso';
@@ -24,6 +26,7 @@ interface Leccion {
   contenidoUrl: string | null;
   contenidoTexto: string | null;
   duracionMinutos: number;
+  numPreguntas?: number;
 }
 
 interface CursoDetalle {
@@ -48,6 +51,35 @@ interface Inscripcion {
   completado: boolean;
   calificacionEvaluacion: number | null;
   leccionesCompletadasIds: string[];
+}
+
+interface ExamenesInfo {
+  calificacionMinima: number;
+  calificacionMaxima: number;
+  resultados: Record<string, { mejorNota: number; intentos: number }>;
+  certificadoFolio: string | null;
+}
+
+interface ArchivoAdicional {
+  id: string;
+  nombre: string;
+  url: string;
+  tamano: number;
+}
+
+interface PreguntaModulo {
+  id: string;
+  texto: string;
+  opciones: string[];
+  multiple: boolean;
+}
+
+interface ResultadoExamen {
+  nota: number;
+  aciertos: number;
+  total: number;
+  detalle: Record<string, boolean>;
+  aprobadoModulo: boolean;
 }
 
 interface Pregunta {
@@ -83,6 +115,16 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
   const [calificacionFinal, setCalificacionFinal] = useState<number | null>(null);
   const [enviandoEvaluacion, setEnviandoEvaluacion] = useState(false);
 
+  // Examen por módulo (cursos de profesores)
+  const [examenes, setExamenes] = useState<ExamenesInfo | null>(null);
+  const [archivos, setArchivos] = useState<ArchivoAdicional[]>([]);
+  const [examenAbierto, setExamenAbierto] = useState(false);
+  const [preguntasModulo, setPreguntasModulo] = useState<PreguntaModulo[] | null>(null);
+  const [respuestasModulo, setRespuestasModulo] = useState<Record<string, number[]>>({});
+  const [resultadoExamen, setResultadoExamen] = useState<ResultadoExamen | null>(null);
+  const [enviandoExamen, setEnviandoExamen] = useState(false);
+  const [errorExamen, setErrorExamen] = useState('');
+
   const cargar = () => {
     fetch(`/api/cursos/${id}`)
       .then(async (res) => {
@@ -91,6 +133,8 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
         setCurso(data.curso);
         setInscripcion(data.inscripcion);
         setCalificacionFinal(data.inscripcion?.calificacionEvaluacion ?? null);
+        setExamenes(data.examenes ?? null);
+        setArchivos(data.archivos ?? []);
         if (data.curso.lecciones.length > 0) {
           const primeraSinCompletar = data.curso.lecciones.find(
             (l: Leccion) => !data.inscripcion?.leccionesCompletadasIds?.includes(l.id)
@@ -112,6 +156,7 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
       const res = await fetch(`/api/cursos/${id}/inscribirse`, { method: 'POST' });
       if (res.ok) {
         setInscripcion({ progreso: 0, completado: false, calificacionEvaluacion: null, leccionesCompletadasIds: [] });
+        cargar(); // trae los archivos adicionales, que solo ven los inscritos
       }
     } finally {
       setInscribiendo(false);
@@ -136,8 +181,64 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
           ),
         });
       }
+      if (res.ok && data.curso?.folio) {
+        setExamenes((e) => (e ? { ...e, certificadoFolio: data.curso.folio } : e));
+      }
     } finally {
       setCompletandoId(null);
+    }
+  };
+
+  const abrirExamen = async (leccionId: string) => {
+    setExamenAbierto(true);
+    setResultadoExamen(null);
+    setRespuestasModulo({});
+    setErrorExamen('');
+    setPreguntasModulo(null);
+    const res = await fetch(`/api/cursos/${id}/modulos/${leccionId}/evaluacion`);
+    const data = await res.json();
+    if (res.ok) setPreguntasModulo(data.preguntas);
+    else setErrorExamen(data.error || 'No se pudo cargar el examen');
+  };
+
+  const alternarRespuesta = (p: PreguntaModulo, indice: number) => {
+    setRespuestasModulo((prev) => {
+      const actual = prev[p.id] ?? [];
+      if (!p.multiple) return { ...prev, [p.id]: [indice] };
+      return {
+        ...prev,
+        [p.id]: actual.includes(indice) ? actual.filter((i) => i !== indice) : [...actual, indice],
+      };
+    });
+  };
+
+  const enviarExamen = async (leccionId: string) => {
+    setEnviandoExamen(true);
+    setErrorExamen('');
+    try {
+      const res = await fetch(`/api/cursos/${id}/modulos/${leccionId}/evaluacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ respuestas: respuestasModulo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorExamen(data.error || 'No se pudo enviar el examen');
+        return;
+      }
+      setResultadoExamen(data);
+      setExamenes((e) =>
+        e
+          ? {
+              ...e,
+              resultados: { ...e.resultados, [leccionId]: { mejorNota: data.resultado.mejorNota, intentos: data.resultado.intentos } },
+              certificadoFolio: data.curso?.folio ?? e.certificadoFolio,
+            }
+          : e
+      );
+      if (data.curso?.promedio !== null && data.curso?.promedio !== undefined) setCalificacionFinal(data.curso.promedio);
+    } finally {
+      setEnviandoExamen(false);
     }
   };
 
@@ -306,8 +407,134 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
             </div>
           )}
 
-          {/* Evaluación final */}
-          <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5">
+          {/* Examen del módulo (cursos de profesores) */}
+          {examenes && leccionActiva && (leccionActiva.numPreguntas ?? 0) > 0 && (
+            <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5 mb-4" data-testid="examen-modulo">
+              <h2 className="text-[14.5px] font-semibold mb-1 flex items-center gap-2">
+                <ClipboardCheck size={16} className="text-cm-accent" /> Examen del módulo
+              </h2>
+              <p className="text-[12px] text-[#6B7280] mb-3">
+                Para aprobar el curso necesita un promedio de {examenes.calificacionMinima} de {examenes.calificacionMaxima}. Puede
+                repetir el examen; se conserva su mejor calificación.
+              </p>
+              {examenes.resultados[leccionActiva.id] && (
+                <p className="text-[12.5px] mb-3">
+                  Su mejor calificación en este módulo: <strong>{examenes.resultados[leccionActiva.id].mejorNota}</strong> (
+                  {examenes.resultados[leccionActiva.id].intentos} {examenes.resultados[leccionActiva.id].intentos === 1 ? 'intento' : 'intentos'})
+                </p>
+              )}
+              {!completadasIds.includes(leccionActiva.id) ? (
+                <p className="text-[12.5px] text-[#6B7280] flex items-center gap-2">
+                  <Lock size={13} /> Marque el módulo como completado para presentar su examen.
+                </p>
+              ) : !examenAbierto ? (
+                <button
+                  onClick={() => abrirExamen(leccionActiva.id)}
+                  className="h-10 px-4 rounded-xl bg-cm-primary text-white text-[13px] font-semibold"
+                >
+                  {examenes.resultados[leccionActiva.id] ? 'Repetir examen' : 'Presentar examen'}
+                </button>
+              ) : resultadoExamen ? (
+                <div className="flex flex-col gap-3">
+                  <div className="text-center py-2">
+                    <p className="text-[28px] font-bold text-cm-primary">
+                      {resultadoExamen.nota} / {examenes.calificacionMaxima}
+                    </p>
+                    <p className="text-[12.5px] text-[#6B7280]">
+                      {resultadoExamen.aciertos} de {resultadoExamen.total} preguntas correctas
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => abrirExamen(leccionActiva.id)}
+                    className="h-9 px-4 rounded-xl border border-[#E4E7EE] text-[12.5px] font-semibold self-center"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              ) : preguntasModulo === null ? (
+                <p className="text-[12.5px] text-[#6B7280]">{errorExamen || 'Cargando examen...'}</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {preguntasModulo.map((p, n) => (
+                    <div key={p.id}>
+                      <p className="text-[13px] font-medium mb-1">
+                        {n + 1}. {p.texto}
+                      </p>
+                      {p.multiple && <p className="text-[11px] text-[#6B7280] mb-2">Hay más de una respuesta correcta: marque todas.</p>}
+                      <div className="flex flex-col gap-1.5">
+                        {p.opciones.map((op, i) => {
+                          const marcada = (respuestasModulo[p.id] ?? []).includes(i);
+                          return (
+                            <label
+                              key={i}
+                              className={`text-[12.5px] px-3 py-2 rounded-lg border cursor-pointer ${
+                                marcada ? 'border-cm-primary bg-cm-primary/5' : 'border-[#E4E7EE]'
+                              }`}
+                            >
+                              <input
+                                type={p.multiple ? 'checkbox' : 'radio'}
+                                name={`pm-${p.id}`}
+                                className="mr-2"
+                                checked={marcada}
+                                onChange={() => alternarRespuesta(p, i)}
+                              />
+                              {op}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {errorExamen && <p role="alert" className="text-[12.5px] text-red-600">{errorExamen}</p>}
+                  <button
+                    onClick={() => enviarExamen(leccionActiva.id)}
+                    disabled={
+                      enviandoExamen || preguntasModulo.some((p) => (respuestasModulo[p.id] ?? []).length === 0)
+                    }
+                    className="h-10 px-4 rounded-xl bg-cm-primary text-white text-[13px] font-semibold self-start disabled:opacity-50"
+                  >
+                    {enviandoExamen ? 'Enviando...' : 'Enviar examen'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Evaluación final: con exámenes por módulo se muestra el resumen/certificado */}
+          {examenes ? (
+            <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5 mb-4" data-testid="resumen-curso">
+              <h2 className="text-[14.5px] font-semibold mb-2 flex items-center gap-2">
+                <Award size={16} className="text-cm-accent" /> Calificación y certificado
+              </h2>
+              {examenes.certificadoFolio ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[13px]">
+                    ¡Felicidades! Aprobó el curso con <strong>{calificacionFinal}</strong> de {examenes.calificacionMaxima}.
+                  </p>
+                  <p className="text-[12px] text-[#6B7280]">Folio: {examenes.certificadoFolio}</p>
+                  <a
+                    href={`/certificado/${examenes.certificadoFolio}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-10 px-4 rounded-xl bg-cm-primary text-white text-[13px] font-semibold self-start inline-flex items-center gap-2"
+                  >
+                    <Award size={14} /> Ver / descargar certificado
+                  </a>
+                </div>
+              ) : calificacionFinal !== null && calificacionFinal < examenes.calificacionMinima ? (
+                <p className="text-[12.5px] text-[#B45309]">
+                  Su promedio actual es {calificacionFinal}; se requieren {examenes.calificacionMinima}. Puede repetir los exámenes de
+                  los módulos para mejorar su calificación.
+                </p>
+              ) : (
+                <p className="text-[12.5px] text-[#6B7280] flex items-center gap-2">
+                  <Lock size={13} /> Complete todos los módulos y presente sus exámenes (promedio mínimo {examenes.calificacionMinima}) para
+                  obtener su certificado.
+                </p>
+              )}
+            </div>
+          ) : (
+          <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5 mb-4">
             <h2 className="text-[14.5px] font-semibold mb-2 flex items-center gap-2">
               <Award size={16} className="text-cm-accent" /> Evaluación final
             </h2>
@@ -365,6 +592,32 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
               </div>
             )}
           </div>
+          )}
+
+          {archivos.length > 0 && (
+            <div className="bg-white border border-[#E4E7EE] rounded-2xl p-5" data-testid="archivos-curso">
+              <h2 className="text-[14.5px] font-semibold mb-3 flex items-center gap-2">
+                <Download size={16} className="text-cm-accent" /> Material adicional
+              </h2>
+              <div className="flex flex-col gap-2">
+                {archivos.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    className="flex items-center justify-between gap-3 text-[12.5px] px-3 py-2.5 rounded-xl border border-[#E4E7EE] hover:bg-[#F4F6FB]"
+                  >
+                    <span className="truncate font-medium">{a.nombre}</span>
+                    <span className="shrink-0 text-[#6B7280]">
+                      {a.tamano > 0 ? `${(a.tamano / 1024 / 1024).toFixed(1)} MB` : ''} ⬇
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Lista de lecciones */}
@@ -379,7 +632,11 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
               return (
                 <button
                   key={l.id}
-                  onClick={() => setLeccionActivaId(l.id)}
+                  onClick={() => {
+                    setLeccionActivaId(l.id);
+                    setExamenAbierto(false);
+                    setResultadoExamen(null);
+                  }}
                   className={`flex items-center gap-2.5 text-left px-3 py-2.5 rounded-xl transition-colors ${
                     activa ? 'bg-cm-primary/8 text-cm-primary' : 'hover:bg-[#F4F6FB]'
                   }`}
@@ -395,6 +652,11 @@ export default function DetalleCurso({ id, tipoRuta }: { id: string; tipoRuta: '
                     <FileText size={13} className="shrink-0 text-[#9297A6]" />
                   )}
                   <span className="text-[12.5px] font-medium min-w-0 flex-1 truncate">{l.titulo}</span>
+                  {examenes && (l.numPreguntas ?? 0) > 0 && (
+                    <span className="text-[10px] font-semibold text-cm-primary shrink-0">
+                      {examenes.resultados[l.id] ? `${examenes.resultados[l.id].mejorNota}` : 'Examen'}
+                    </span>
+                  )}
                   <span className="text-[10.5px] text-[#9297A6] shrink-0">{l.duracionMinutos}m</span>
                 </button>
               );

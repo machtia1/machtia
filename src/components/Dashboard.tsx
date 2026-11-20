@@ -21,6 +21,7 @@ import {
   Handshake,
   HeartHandshake,
   Image,
+  Landmark,
   type LucideIcon,
   Library,
   LayoutGrid,
@@ -81,6 +82,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Mi Suscripción', href: '/home/mi-oficina/suscripcion', icon: CreditCard },
       { label: 'Mis Logros', href: '/home/mi-oficina/logros', icon: Trophy },
       { label: 'Mis Ganancias', href: '/home/mi-oficina/ganancias', icon: DollarSign },
+      { label: 'Datos bancarios', href: '/home/mi-oficina/datos-bancarios', icon: Landmark },
     ],
   },
   {
@@ -405,6 +407,16 @@ export default function Dashboard() {
             >
               <GraduationCap size={16} className="shrink-0" />
               Profesores
+            </Link>
+          )}
+          {role === 'administrador' && (
+            <Link
+              href="/home/datos-bancarios"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
+            >
+              <Landmark size={16} className="shrink-0" />
+              Datos bancarios
             </Link>
           )}
           {role === 'administrador' && (
