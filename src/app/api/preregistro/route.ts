@@ -7,19 +7,30 @@ const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
-    const { nombre, correo, invitadorLinkId, slotToken } = await request.json();
+    const { nombre, correo, invitadorLinkId, slotToken, profesorToken } = await request.json();
 
     if (!nombre?.trim() || !correo?.trim() || !CORREO_VALIDO.test(correo)) {
       return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
     }
 
-    if (!invitadorLinkId && !slotToken) {
+    if (!invitadorLinkId && !slotToken && !profesorToken) {
       return NextResponse.json({ error: 'Falta el enlace de invitación' }, { status: 400 });
     }
 
     let slotRestringidoId: string | undefined;
+    let espacioProfesorId: string | undefined;
 
-    if (slotToken) {
+    if (profesorToken) {
+      // Invitación de Profesor/Facilitador: solo sirve mientras el espacio esté disponible.
+      const espacio = await prisma.espacioProfesor.findUnique({
+        where: { inviteLink: profesorToken },
+        select: { id: true, status: true },
+      });
+      if (!espacio || espacio.status !== 'INVITADO') {
+        return NextResponse.json({ error: 'El enlace de invitación no es válido' }, { status: 404 });
+      }
+      espacioProfesorId = espacio.id;
+    } else if (slotToken) {
       const slot = await prisma.slotRestringido.findUnique({
         where: { inviteLink: slotToken },
         select: { id: true, status: true },
@@ -46,13 +57,23 @@ export async function POST(request: Request) {
 
     const tokenConfirmacion = existente?.tokenConfirmacion ?? randomUUID();
 
+    if (existente && espacioProfesorId) {
+      // Si la misma persona vuelve a entrar con un link de profesor, el
+      // preregistro pendiente queda ligado a este espacio.
+      await prisma.preregistro.update({
+        where: { id: existente.id },
+        data: { espacioProfesorId, slotRestringidoId: null, invitadorSlug: null },
+      });
+    }
+
     if (!existente) {
       await prisma.preregistro.create({
         data: {
           nombre: nombre.trim(),
           correo: correo.trim().toLowerCase(),
-          invitadorSlug: slotRestringidoId ? null : invitadorLinkId,
+          invitadorSlug: slotRestringidoId || espacioProfesorId ? null : invitadorLinkId,
           slotRestringidoId,
+          espacioProfesorId,
           tokenConfirmacion,
         },
       });
@@ -67,7 +88,11 @@ export async function POST(request: Request) {
       asunto: 'Confirma tu correo — Club Machtia',
       htmlContenido: `
         <p>Hola ${nombre},</p>
-        <p>Gracias por tu interés en Club Machtia. Confirma tu correo para continuar con tu registro:</p>
+        <p>${
+          espacioProfesorId
+            ? 'Gracias por tu interés en ser Profesor/Facilitador en Club Machtia. Continúa con tu registro aquí:'
+            : 'Gracias por tu interés en Club Machtia. Confirma tu correo para continuar con tu registro:'
+        }</p>
         <p><a href="${linkConfirmacion}">${linkConfirmacion}</a></p>
       `,
     });

@@ -27,6 +27,27 @@ export async function POST(request: Request) {
 
   const correoOriginal = usuario.correo;
 
+  // Profesor/Facilitador: se borra su registro pendiente y su espacio vuelve a
+  // quedar disponible con el mismo link.
+  const espacioProf = await prisma.espacioProfesor.findUnique({
+    where: { usuarioId },
+    select: { id: true },
+  });
+  if (espacioProf) {
+    await prisma.$transaction([
+      prisma.espacioProfesor.update({
+        where: { id: espacioProf.id },
+        data: { status: 'INVITADO', usuarioId: null },
+      }),
+      prisma.user.delete({ where: { id: usuarioId } }),
+      prisma.preregistro.updateMany({
+        where: { correo: correoOriginal },
+        data: { confirmado: false },
+      }),
+    ]);
+    return NextResponse.json({ ok: true });
+  }
+
   // La posición en el árbol (padreRedId/ladoEnPadre) solo se asigna al
   // APROBAR (ver /api/admin/aprobar) — así que alguien todavía
   // PENDIENTE_APROBACION nunca tiene nada realmente conectado bajo él,

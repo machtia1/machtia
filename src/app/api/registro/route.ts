@@ -8,24 +8,26 @@ const SUSCRIPCIONES_VALIDAS = ['BASICA', 'PLUS', 'NEGOCIOS'] as const;
 // Todas generan regalías con la misma mecánica que Negocios (confirmado
 // por el cliente el 15 sept 2026); el "rol" define sus permisos reales
 // dentro de la plataforma, y son independientes de la suscripción.
+//
+// Desde el 19 nov 2026 los espacios restringidos solo pueden ser de 3 tipos:
+// Socio Fundador, Asociado y Administrativo/Operativo (este último se guarda
+// internamente como ASISTENTE_ADMINISTRATIVO). El Profesor/Facilitador ya no
+// es una opción restringida: tiene sus propios espacios e invitaciones.
 const OPCIONES_RESTRINGIDO = [
   'SOCIO_FUNDADOR',
   'ASOCIADO',
-  'PROFESOR_FACILITADOR',
   'ASISTENTE_ADMINISTRATIVO',
 ] as const;
 
 const ROL_POR_OPCION_RESTRINGIDA: Record<(typeof OPCIONES_RESTRINGIDO)[number], string> = {
   SOCIO_FUNDADOR: 'SOCIO',
   ASOCIADO: 'USUARIO',
-  PROFESOR_FACILITADOR: 'PROFESOR_FACILITADOR',
   ASISTENTE_ADMINISTRATIVO: 'ASISTENTE_ADMINISTRATIVO',
 };
 
 const SUSCRIPCION_POR_OPCION_RESTRINGIDA: Record<(typeof OPCIONES_RESTRINGIDO)[number], string> = {
   SOCIO_FUNDADOR: 'SOCIO_FUNDADOR',
   ASOCIADO: 'ASOCIADO',
-  PROFESOR_FACILITADOR: 'NEGOCIOS',
   ASISTENTE_ADMINISTRATIVO: 'NEGOCIOS',
 };
 
@@ -119,17 +121,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan datos o la contraseña es muy corta (mínimo 8 caracteres)' }, { status: 400 });
     }
 
-    if (!suscripcion) {
-      return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
-    }
-
-    if (!comprobante) {
-      return NextResponse.json({ error: 'Sube tu comprobante de pago' }, { status: 400 });
-    }
-    if (comprobante.tamano > TAMANO_MAX_COMPROBANTE) {
-      return NextResponse.json({ error: 'El comprobante no debe pesar más de 4 MB' }, { status: 400 });
-    }
-
     const preregistro = await prisma.preregistro.findUnique({ where: { tokenConfirmacion: token } });
     if (!preregistro) {
       return NextResponse.json({ error: 'Enlace inválido o expirado' }, { status: 404 });
@@ -138,6 +129,77 @@ export async function POST(request: Request) {
     const yaExiste = await prisma.user.findUnique({ where: { correo: preregistro.correo } });
     if (yaExiste) {
       return NextResponse.json({ error: 'Ya existe una cuenta con este correo' }, { status: 409 });
+    }
+
+    // ---------- Profesor/Facilitador ----------
+    // Registro simple: sin suscripción, sin comprobante de pago y sin entrar a
+    // la Red. Queda pendiente y un administrador solo lo autoriza.
+    if (preregistro.espacioProfesorId) {
+      const bcryptProf = await import('bcryptjs');
+      const hashProf = await bcryptProf.hash(password, 10);
+
+      // Reserva el espacio de forma atómica: si otra persona ya lo usó, no pasa.
+      const reservado = await prisma.espacioProfesor.updateMany({
+        where: { id: preregistro.espacioProfesorId, status: 'INVITADO', usuarioId: null },
+        data: { status: 'OCUPADO' },
+      });
+      if (reservado.count === 0) {
+        return NextResponse.json(
+          { error: 'Este enlace de invitación ya fue utilizado.' },
+          { status: 409 }
+        );
+      }
+
+      try {
+        const profesor = await prisma.user.create({
+          data: {
+            nombre: preregistro.nombre,
+            apellido,
+            correo: preregistro.correo,
+            passwordHash: hashProf,
+            pais,
+            ladaPais,
+            telefono,
+            estadoProvincia,
+            ciudad,
+            rol: 'PROFESOR_FACILITADOR',
+            suscripcion: 'CREADOR_DE_CURSOS',
+            correoConfirmado: true,
+            status: 'PENDIENTE_APROBACION',
+          },
+        });
+        await prisma.espacioProfesor.update({
+          where: { id: preregistro.espacioProfesorId },
+          data: { usuarioId: profesor.id },
+        });
+        await prisma.preregistro.update({
+          where: { id: preregistro.id },
+          data: { confirmado: true },
+        });
+        return NextResponse.json({
+          ok: true,
+          mensaje:
+            'Tu registro fue recibido. Un administrador va a autorizar tu cuenta pronto y te avisaremos por correo.',
+          usuarioId: profesor.id,
+        });
+      } catch (errorProfesor) {
+        // Si algo falla, el espacio vuelve a quedar disponible.
+        await prisma.espacioProfesor.update({
+          where: { id: preregistro.espacioProfesorId },
+          data: { status: 'INVITADO', usuarioId: null },
+        });
+        throw errorProfesor;
+      }
+    }
+
+    if (!suscripcion) {
+      return NextResponse.json({ error: 'Selecciona una suscripción válida' }, { status: 400 });
+    }
+    if (!comprobante) {
+      return NextResponse.json({ error: 'Sube tu comprobante de pago' }, { status: 400 });
+    }
+    if (comprobante.tamano > TAMANO_MAX_COMPROBANTE) {
+      return NextResponse.json({ error: 'El comprobante no debe pesar más de 4 MB' }, { status: 400 });
     }
 
     const esRestringido = !!preregistro.slotRestringidoId;

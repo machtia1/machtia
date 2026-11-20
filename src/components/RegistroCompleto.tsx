@@ -18,6 +18,7 @@ interface DatosPreregistro {
   correo: string;
   invitadorLinkId: string;
   esRestringido?: boolean;
+  esProfesor?: boolean;
 }
 
 const SUSCRIPCIONES = [
@@ -29,8 +30,7 @@ const SUSCRIPCIONES = [
 const SUSCRIPCIONES_RESTRINGIDO = [
   { valor: 'SOCIO_FUNDADOR', etiqueta: 'Socio Fundador' },
   { valor: 'ASOCIADO', etiqueta: 'Asociado' },
-  { valor: 'PROFESOR_FACILITADOR', etiqueta: 'Profesor Facilitador' },
-  { valor: 'ASISTENTE_ADMINISTRATIVO', etiqueta: 'Asistente Administrativo' },
+  { valor: 'ASISTENTE_ADMINISTRATIVO', etiqueta: 'Administrativo/Operativo' },
 ] as const;
 
 export default function RegistroCompleto({ token }: { token: string }) {
@@ -143,13 +143,45 @@ export default function RegistroCompleto({ token }: { token: string }) {
     if (password.length < 8) return setError('La contraseña debe tener al menos 8 caracteres');
     if (password !== confirmarPassword) return setError('Las contraseñas no coinciden');
     if (procesandoArchivo) return setError('Espera un momento, estamos preparando tu imagen.');
-    if (!comprobante) return setError('Sube tu comprobante de pago');
-    if (comprobante.size > LIMITE_SUBIDA_BYTES) {
-      return setError('El comprobante pesa demasiado, elige una imagen más pequeña.');
+    const esProfesor = !!datos?.esProfesor;
+    if (!esProfesor) {
+      if (!comprobante) return setError('Sube tu comprobante de pago');
+      if (comprobante.size > LIMITE_SUBIDA_BYTES) {
+        return setError('El comprobante pesa demasiado, elige una imagen más pequeña.');
+      }
     }
 
     setEnviando(true);
     try {
+      if (esProfesor) {
+        // Profesor/Facilitador: registro simple, sin suscripción ni comprobante.
+        try {
+          const res = await fetch('/api/registro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token,
+              apellido: apellido.trim(),
+              pais,
+              ladaPais,
+              telefono: telefono.trim(),
+              estadoProvincia: estadoProvincia.trim(),
+              ciudad: ciudad.trim(),
+              password,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setError(data.error || 'No se pudo completar el registro');
+            return;
+          }
+          setCompletado(true);
+        } catch {
+          setError('Error de conexión. Revisa tu internet e intenta de nuevo.');
+        }
+        return;
+      }
+      if (!comprobante) return;
       // Reintenta solo si el envío se corta antes de llegar al servidor, y
       // como último recurso usa un camino distinto (ver subidaArchivos.ts).
       const resultado = await enviarRegistroComprobante(
@@ -207,8 +239,9 @@ export default function RegistroCompleto({ token }: { token: string }) {
           </div>
           <h1 className="text-[20px] font-semibold mb-2">¡Registro recibido!</h1>
           <p className="text-white/70 text-[14px] leading-relaxed mb-6">
-            Un administrador va a revisar tu comprobante de pago y activar tu cuenta pronto. Te
-            avisaremos por correo en cuanto esté lista.
+            {datos.esProfesor
+              ? 'Un administrador va a autorizar tu cuenta pronto. Te avisaremos por correo en cuanto esté lista.'
+              : 'Un administrador va a revisar tu comprobante de pago y activar tu cuenta pronto. Te avisaremos por correo en cuanto esté lista.'}
           </p>
           <button
             onClick={() => router.push('/')}
@@ -238,7 +271,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
         </div>
 
         <p className="text-[11px] font-bold uppercase tracking-wide text-[#7dd3fc] mb-1.5">
-          Un paso más
+          {datos.esProfesor ? 'Registro de Profesor/Facilitador' : 'Un paso más'}
         </p>
         <h1 className="text-[26px] font-bold mb-1">Completa tu registro, {datos.nombre}</h1>
         <p className="text-white/55 text-[14px] mb-8">{datos.correo}</p>
@@ -324,15 +357,16 @@ export default function RegistroCompleto({ token }: { token: string }) {
             </div>
           </div>
 
+          {!datos.esProfesor && (
           <div>
             <label className="block text-[10.5px] font-bold uppercase tracking-wide text-white/45 mb-2">Elige tu suscripción</label>
-            <div className={`grid gap-2 ${opcionesSuscripcion.length === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            <div className="grid gap-2 grid-cols-3">
               {opcionesSuscripcion.map((s) => (
                 <button
                   type="button"
                   key={s.valor}
                   onClick={() => setSuscripcion(s.valor)}
-                  className={`h-11 rounded-xl text-[13px] font-semibold border transition-colors ${
+                  className={`min-h-11 px-1 leading-tight rounded-xl text-[12.5px] sm:text-[13px] font-semibold border transition-colors ${
                     suscripcion === s.valor
                       ? 'bg-gradient-to-br from-[#38bdf8] to-[#6366f1] text-white border-transparent shadow-[0_8px_22px_rgba(56,189,248,0.3)]'
                       : 'bg-white/5 border-white/[0.14] text-white/80'
@@ -343,6 +377,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
               ))}
             </div>
           </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -366,6 +401,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
             </div>
           </div>
 
+          {!datos.esProfesor && (
           <div>
             <label className="block text-[10.5px] font-bold uppercase tracking-wide text-white/45 mb-1.5">Comprobante de pago</label>
             <input
@@ -386,6 +422,7 @@ export default function RegistroCompleto({ token }: { token: string }) {
               <p className="text-emerald-300 text-[12px] mt-1.5 break-words">✓ {infoArchivo}</p>
             )}
           </div>
+          )}
 
           {error && (
             <div>

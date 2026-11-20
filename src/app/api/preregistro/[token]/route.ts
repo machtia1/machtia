@@ -29,5 +29,6 @@ export async function GET(
     correo: preregistro.correo,
     invitadorLinkId: preregistro.invitadorSlug,
     esRestringido: !!preregistro.slotRestringidoId,
+    esProfesor: !!preregistro.espacioProfesorId,
   });
 }

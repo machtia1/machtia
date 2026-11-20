@@ -26,6 +26,8 @@ export async function GET(request: Request) {
     status: { not: 'RECHAZADA' },
     fueraDeRed: false,
     reservado: false,
+    // Los profesores no forman parte de la Red.
+    rol: { not: 'PROFESOR_FACILITADOR' },
   };
 
   if (pais) where.pais = pais;

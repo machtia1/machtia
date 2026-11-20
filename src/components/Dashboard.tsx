@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useCountdown } from '@/lib/useCountdown';
 import LoadingLogo from './LoadingLogo';
+import PanelProfesor from './PanelProfesor';
 
 type Role = 'administrador' | 'profesor' | 'socio' | 'usuario' | 'asistente';
 
@@ -44,7 +45,7 @@ const ROLE_LABELS: Record<Role, string> = {
   profesor: 'Profesor Facilitador',
   socio: 'Socio',
   usuario: 'Usuario · Plus',
-  asistente: 'Asistente Administrativo',
+  asistente: 'Administrativo/Operativo',
 };
 
 const ROLE_NOTES: Record<Role, string> = {
@@ -56,7 +57,7 @@ const ROLE_NOTES: Record<Role, string> = {
   usuario:
     'Sesión de Usuario: la opción de crear cursos aparece visible pero permanecerá inactiva hasta diciembre de 2026.',
   asistente:
-    'Sesión de Asistente Administrativo: puedes editar anuncios, revisar contenido y moderar foros.',
+    'Sesión de Administrativo/Operativo: puedes editar anuncios, revisar contenido y moderar foros.',
 };
 
 interface NavChild {
@@ -252,6 +253,11 @@ export default function Dashboard() {
     return null;
   }
 
+  // El Profesor/Facilitador tiene su propio panel, sin Red ni regalías.
+  if (user.rol === 'PROFESOR_FACILITADOR') {
+    return <PanelProfesor user={user} />;
+  }
+
   const role = mapRol(user.rol);
   const nombreCompleto = `${user.nombre} ${user.apellido}`;
   const primeraLetra = user.nombre.charAt(0).toUpperCase();
@@ -389,6 +395,16 @@ export default function Dashboard() {
             >
               <Users size={16} className="shrink-0" />
               Usuarios
+            </Link>
+          )}
+          {role === 'administrador' && (
+            <Link
+              href="/home/profesores"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg text-cm-primary font-bold text-[14px] px-3 py-2.5 flex items-center gap-2.5"
+            >
+              <GraduationCap size={16} className="shrink-0" />
+              Profesores
             </Link>
           )}
           {role === 'administrador' && (

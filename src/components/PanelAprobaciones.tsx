@@ -27,7 +27,8 @@ const ETIQUETA_SUSCRIPCION: Record<string, string> = {
   NEGOCIOS: 'Negocios',
   NINOS: 'Niños',
   SOCIO_FUNDADOR: 'Socio Fundador',
-  CREADOR_DE_CURSOS: 'Creador de Cursos',
+  ASOCIADO: 'Asociado',
+  CREADOR_DE_CURSOS: 'Profesor/Facilitador',
 };
 
 export default function PanelAprobaciones() {

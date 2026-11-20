@@ -12,8 +12,7 @@ const SUSCRIPCIONES_FILTRO = [
   { valor: 'NINOS', etiqueta: 'Niños' },
   { valor: 'SOCIO_FUNDADOR', etiqueta: 'Socio Fundador' },
   { valor: 'ASOCIADO', etiqueta: 'Asociado' },
-  { valor: 'PROFESOR_FACILITADOR', etiqueta: 'Profesor Facilitador' },
-  { valor: 'ASISTENTE_ADMINISTRATIVO', etiqueta: 'Asistente Administrativo' },
+  { valor: 'ASISTENTE_ADMINISTRATIVO', etiqueta: 'Administrativo/Operativo' },
 ] as const;
 
 interface UsuarioBusqueda {

@@ -32,6 +32,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este usuario ya fue procesado antes' }, { status: 409 });
   }
 
+  // Profesor/Facilitador: solo se autoriza. No pertenece a la Red (sin
+  // árbol, sin invitador), no paga membresía y no genera regalías.
+  const espacioProfesor = await prisma.espacioProfesor.findUnique({
+    where: { usuarioId },
+    select: { id: true },
+  });
+  if (espacioProfesor) {
+    await prisma.user.update({
+      where: { id: usuarioId },
+      data: { status: 'ACTIVA', membresiaExpiraEn: null },
+    });
+    await crearNotificacionUsuario(
+      usuarioId,
+      '🎓 Tu cuenta de Profesor/Facilitador fue autorizada. Ya puedes entrar a Mis Cursos.'
+    );
+    return NextResponse.json({ ok: true });
+  }
+
   // Todas las membresías se sincronizan al mismo calendario fijo:
   // 30 de noviembre, 10:00 p.m. (hora Centro de México) — regla del
   // 22 sept 2026 actualizada el 27 oct 2026 al ampliarse la campaña;

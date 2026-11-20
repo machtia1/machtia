@@ -106,6 +106,10 @@ model User {
 
   slotRestringido SlotRestringido?
 
+  // Profesor/Facilitador: espacio (1 a 400) con el que se registró. No
+  // pertenece a la Red ni genera regalías.
+  espacioProfesor EspacioProfesor?
+
   // Red Alterna — regalías que este usuario generó y las que ganó
   regaliasOrigen      RegaliaRedAlterna[] @relation("RegaliasOrigen")
   regaliasGanadas     RegaliaRedAlterna[] @relation("RegaliasGanadas")
@@ -166,6 +170,25 @@ model SlotRestringido {
   actualizadoEn DateTime @updatedAt
 
   @@unique([nivel, posicion])
+}
+
+// ============================================================
+// Espacios de Profesor/Facilitador (máximo 400, se crean conforme se
+// necesitan desde el Panel de Administrador). Cada uno tiene su propio
+// link de invitación. Quien lo usa NO entra a la Red ni genera regalías.
+// ============================================================
+model EspacioProfesor {
+  id         String     @id @default(cuid())
+  numero     Int        @unique // 1 a 400
+  inviteLink String     @unique
+  status     EstadoSlot @default(INVITADO) // INVITADO = disponible, OCUPADO = ya registrado
+
+  usuarioId String? @unique
+  usuario   User?   @relation(fields: [usuarioId], references: [id])
+  preregistros Preregistro[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 }
 
 // ============================================================
@@ -293,6 +316,8 @@ model Preregistro {
   invitadorSlug     String?
   slotRestringidoId String?
   slotRestringido   SlotRestringido? @relation(fields: [slotRestringidoId], references: [id])
+  espacioProfesorId String?
+  espacioProfesor   EspacioProfesor? @relation(fields: [espacioProfesorId], references: [id])
   tokenConfirmacion String   @unique
   confirmado        Boolean  @default(false)
   creadoEn          DateTime @default(now())

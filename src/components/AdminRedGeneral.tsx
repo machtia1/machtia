@@ -257,8 +257,8 @@ export default function AdminRedGeneral() {
 
                     <p className="text-[12px] text-[#6B7280]">
                       Comparte este link con la persona. Ella hace su propio registro (igual que
-                      cualquier usuario), eligiendo entre Socio Fundador, Asociado, Profesor
-                      Facilitador o Asistente Administrativo. Cuando termine, este espacio va a
+                      cualquier usuario), eligiendo entre Socio Fundador, Asociado o
+                      Administrativo/Operativo. Cuando termine, este espacio va a
                       pasar a &quot;Ocupado&quot; solo, y su registro va a aparecer en el Panel de
                       Aprobaciones para que lo revises como cualquier otro.
                     </p>
